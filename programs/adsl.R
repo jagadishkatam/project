@@ -371,7 +371,6 @@ adsl <- derive_vars_merged(
   by_vars = vars( USUBJID)
 )
 
-
 HEIGHT <- vs %>% filter(VSTESTCD=='HEIGHT' & VISITNUM==1) %>%
   mutate(HEIGHTBL=round(VSSTRESN,1)) %>% select(USUBJID, HEIGHTBL)
 
@@ -386,8 +385,7 @@ trt <- sort(paste(adsl$SITEID,adsl$TRT01PN,sep='_'))
 rle <- do.call(cbind,rle(trt)) %>% as_tibble() %>%
   tidyr::extract(values, into = c('SITEID','TRT01PN'), regex = '(.*)_(.*)', convert = T) %>%
   mutate(SITEGR1=ifelse(as.numeric(lengths)<3, '900', as.character(SITEID)),
-         SITEID=as.character(SITEID), TRT01PN=as.numeric(TRT01PN)) %>%
-  select(-lengths)
+         SITEID=as.character(SITEID), TRT01PN=as.numeric(TRT01PN)) %>%  select(-lengths)
 
 adsl <- derive_vars_merged(
   adsl,
@@ -444,8 +442,8 @@ COMPFL <- metatools::combine_supp(dm,suppdm) %>%
 adsl <- derive_vars_merged(
   adsl,
   dataset_add = select(COMPFL, USUBJID, COMP8FL, COMP16FL, COMP24FL, ITTFL, EFFFL),
-  by_vars = vars( USUBJID)
-) %>% mutate(COMP8FL=ifelse(is.na(COMP8FL),'N', COMP8FL),
+  by_vars = vars( USUBJID)) %>% 
+  mutate(COMP8FL=ifelse(is.na(COMP8FL),'N', COMP8FL),
              COMP16FL=ifelse(is.na(COMP16FL),'N', COMP16FL),
              COMP24FL=ifelse(is.na(COMP24FL),'N', COMP24FL),
              ITTFL=ifelse(is.na(ITTFL),'N', ITTFL),
