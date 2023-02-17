@@ -12,7 +12,6 @@ library(tidyverse)
 library(xportr)
 library(metacore)
 library(metatools)
-
 # Load source datasets ----
 
 # Use e.g. haven::read_sas to read in .sas7bdat, or other suitable functions
@@ -120,6 +119,28 @@ format_eoxxstt <- function(x) {
   )
 }
 
+format_TRT01P <- function(x) {
+  case_when(
+    x == "Placebo" ~ 0,
+    x == "Xanomeline High Dose" ~ 81,
+    x == "Xanomeline Low Dose" ~ 54
+  )
+}
+
+format_DCSREAS <- function(x) {
+  case_when(
+    x == "ADVERSE EVENT" ~ "Adverse Event",
+    x == "STUDY TERMINATED BY SPONSOR" ~ "Sponsor Decision",
+    x == "DEATH" ~ "Death",
+    x == "WITHDRAWAL BY SUBJECT" ~ "Withdrew Consent",
+    x == "PHYSICIAN DECISION" ~ "Physician Decision",
+    x == "PROTOCOL VIOLATION" ~ "I/E Not Met",
+    x == "LOST TO FOLLOW-UP" ~ "Lost to Follow-up",
+    x == "LACK OF EFFICACY" ~ "Lack of Efficacy",
+    T ~ NA_character_
+  )
+}
+
 # Derivations ----
 # impute start and end time of exposure to first and last respectively, do not impute date
 ex_ext <- ex %>%
@@ -133,11 +154,16 @@ ex_ext <- ex %>%
     time_imputation = "last"
   )
 
-adsl <- dm %>%
+
+ex_dt <- ex %>% group_by(USUBJID) %>% slice_tail(n=1) %>% select(USUBJID, EXENDTC) %>%
+  mutate(TRTEDT_EXENDTC=as.Date(EXENDTC,'%Y-%m-%d')) %>% ungroup()
+
+
+adsl <- dm %>% filter(ARMCD!='Scrnfail') %>%
   ## derive treatment variables (TRT01P, TRT01A) ----
 # See also the "Visit and Period Variables" vignette
 # (https://pharmaverse.github.io/admiral/articles/visits_periods.html#treatment_adsl)
-mutate(TRT01P = ARM, TRT01A = ACTARM) %>%
+mutate(TRT01P = ARM, TRT01A = ARM) %>%
   ## derive treatment start date (TRTSDTM) ----
 derive_vars_merged(
   dataset_add = ex_ext,
@@ -162,9 +188,7 @@ derive_vars_merged(
   by_vars = vars(STUDYID, USUBJID)
 ) %>%
   ## Derive treatment end/start date TRTSDT/TRTEDT ----
-derive_vars_dtm_to_dt(source_vars = vars(TRTSDTM, TRTEDTM)) %>%
-  ## derive treatment duration (TRTDURD) ----
-derive_var_trtdurd()
+derive_vars_dtm_to_dt(source_vars = vars(TRTSDTM, TRTEDTM))
 
 ## Disposition dates, status ----
 # convert character date to numeric date without imputation
@@ -210,6 +234,13 @@ adsl <- adsl %>%
     by_vars = vars(STUDYID, USUBJID),
     new_vars = vars(RANDDT = DSSTDT)
   ) %>%
+  # Derive Randomization Date
+  derive_vars_merged(
+    dataset_add = ds_ext,
+    filter_add = VISITNUM>3 & DSCAT=='DISPOSITION EVENT',
+    by_vars = vars(STUDYID, USUBJID),
+    new_vars = vars(DSDATE = DSSTDT)
+  ) %>%
   # Death date - impute partial date to first day/month
   derive_vars_dt(
     new_vars_prefix = "DTH",
@@ -229,7 +260,17 @@ adsl <- adsl %>%
     start_date = TRTEDT,
     end_date = DTHDT,
     add_one = FALSE
-  )
+  ) %>%
+  derive_vars_merged(
+    dataset_add = ex_dt,
+    by_vars = vars(USUBJID)
+  ) %>%
+  mutate(TRTEDT=case_when(
+    is.na(TRTEDT) ~ DSDATE,
+    is.na(TRTEDT_EXENDTC) ~ DSDATE,
+    T ~ TRTEDT)) %>%
+  ## derive treatment duration (TRTDURD) ----
+derive_var_trtdurd()
 
 ## Last known alive date ----
 ae_start_date <- date_source(
@@ -291,8 +332,8 @@ mutate(
   AGEGR1N = format_agegr1n(AGE),
   REGION1 = format_region1(COUNTRY),
   LDDTHGR1 = format_lddthgr1(LDDTHELD),
-  TRT01PN=factor(TRT01P, labels = c(0,NA_real_,81, 54)),
-  TRT01AN=factor(TRT01A, labels = c(0,NA_real_,81, 54)),
+  TRT01PN=format_TRT01P(TRT01P),
+  TRT01AN=format_TRT01P(TRT01A),
   DTH30FL = if_else(LDDTHGR1 == "<= 30", "Y", NA_character_),
   DTHA30FL = if_else(LDDTHGR1 == "> 30", "Y", NA_character_),
   DTHB30FL = if_else(DTHDT <= TRTSDT + 30, "Y", NA_character_),
@@ -311,8 +352,9 @@ adsl <- derive_vars_merged(
   by_vars = vars( USUBJID)
 )
 
-visnumen <- ds %>% filter(DSTERM=='PROTOCOL COMPLETED') %>%
-  mutate(VISNUMEN=ifelse(VISITNUM==13, 12, VISITNUM)) %>% select(USUBJID, VISNUMEN)
+visnumen <- ds %>% filter(DSCAT=='DISPOSITION EVENT') %>%
+  mutate(VISNUMEN=ifelse(DSTERM=='PROTOCOL COMPLETED' & VISITNUM==13, 12, VISITNUM)) %>%
+  select(USUBJID, VISNUMEN)
 
 adsl <- derive_vars_merged(
   adsl,
@@ -320,7 +362,8 @@ adsl <- derive_vars_merged(
   by_vars = vars( USUBJID)
 )
 
-WEIGHT <- vs %>% filter(VSTESTCD=='WEIGHT' & VISITNUM==3) %>%  select(USUBJID, WEIGHTBL=VSSTRESN)
+WEIGHT <- vs %>% filter(VSTESTCD=='WEIGHT' & VISITNUM==3) %>% group_by(USUBJID) %>% slice_tail(n=1) %>%
+  mutate(WEIGHTBL=round(VSSTRESN,1)) %>% select(USUBJID, WEIGHTBL) %>% ungroup()
 
 adsl <- derive_vars_merged(
   adsl,
@@ -328,8 +371,8 @@ adsl <- derive_vars_merged(
   by_vars = vars( USUBJID)
 )
 
-
-HEIGHT <- vs %>% filter(VSTESTCD=='HEIGHT' & VISITNUM==1) %>%  select(USUBJID, HEIGHTBL=VSSTRESN)
+HEIGHT <- vs %>% filter(VSTESTCD=='HEIGHT' & VISITNUM==1) %>%
+  mutate(HEIGHTBL=round(VSSTRESN,1)) %>% select(USUBJID, HEIGHTBL)
 
 adsl <- derive_vars_merged(
   adsl,
@@ -341,8 +384,8 @@ trt <- sort(paste(adsl$SITEID,adsl$TRT01PN,sep='_'))
 
 rle <- do.call(cbind,rle(trt)) %>% as_tibble() %>%
   tidyr::extract(values, into = c('SITEID','TRT01PN'), regex = '(.*)_(.*)', convert = T) %>%
-  mutate(SITEGR1=ifelse(as.numeric(lengths)<3, '999', as.character(SITEID)), SITEID=as.character(SITEID), TRT01PN=factor(TRT01PN)) %>%
-  select(-lengths)
+  mutate(SITEGR1=ifelse(as.numeric(lengths)<3, '900', as.character(SITEID)),
+         SITEID=as.character(SITEID), TRT01PN=as.numeric(TRT01PN)) %>%  select(-lengths)
 
 adsl <- derive_vars_merged(
   adsl,
@@ -376,7 +419,7 @@ adsl <- derive_vars_merged(
 
 adsl <- adsl %>% mutate(DISCONFL=ifelse(DCDECOD!='COMPLETED', 'Y', NA_character_),
                         DSRAEFL=ifelse(DCDECOD=='ADVERSE EVENT','Y',NA_character_),
-                        BMIBL=WEIGHTBL / ((HEIGHTBL/100)^2),
+                        BMIBL=round(WEIGHTBL / ((HEIGHTBL/100)^2),1),
                         BMIBLGR1=format_bmiblgr1(BMIBL),
                         RACEN=format_racen(RACE))
 
@@ -390,7 +433,7 @@ adsl <- derive_vars_merged(
 )
 
 adsl <- derive_vars_dy(adsl, reference_date = DISONSDT, source_vars = vars(DURDIS=VISIT1DT)) %>%
-  mutate(DURDSGR1=format_durdsgr1(DURDIS))
+  mutate(DURDIS=round(DURDIS/30.4375,1),DURDSGR1=format_durdsgr1(DURDIS))
 
 
 COMPFL <- metatools::combine_supp(dm,suppdm) %>%
@@ -399,7 +442,12 @@ COMPFL <- metatools::combine_supp(dm,suppdm) %>%
 adsl <- derive_vars_merged(
   adsl,
   dataset_add = select(COMPFL, USUBJID, COMP8FL, COMP16FL, COMP24FL, ITTFL, EFFFL),
-  by_vars = vars( USUBJID)
+  by_vars = vars( USUBJID)) %>% 
+  mutate(COMP8FL=ifelse(is.na(COMP8FL),'N', COMP8FL),
+             COMP16FL=ifelse(is.na(COMP16FL),'N', COMP16FL),
+             COMP24FL=ifelse(is.na(COMP24FL),'N', COMP24FL),
+             ITTFL=ifelse(is.na(ITTFL),'N', ITTFL),
+             EFFFL=ifelse(is.na(EFFFL),'N', EFFFL)
 )
 
 
@@ -417,11 +465,18 @@ dosconp <- ds %>% filter(DSCAT=='DISPOSITION EVENT') %>% derive_vars_dt(new_vars
 
 cumdose <- visit4 %>% full_join(visit12, by='USUBJID') %>% full_join(visit26, by='USUBJID') %>%
   full_join(dosconp, by='USUBJID') %>% full_join(adsl %>% select(USUBJID, TRTSDT, TRTEDT, TRT01PN, TRTDURD), by='USUBJID') %>%
-  mutate(first=ifelse(!(DISPXDT<=VISIT4DT),VISIT4DT-TRTSDT+1, TRTEDT-TRTSDT+1),
-         second=ifelse(!(DISPXDT<=VISIT12DT),VISIT12DT-TRTSDT+1, TRTEDT-TRTSDT+1),
-         third=ifelse((DISPXDT>VISIT12DT),TRTEDT-VISIT12DT+1, NA),
-         CUMDOSE=as.numeric(TRT01PN)*rowSums(across(c(first,second,third)), na.rm=T),
-         AVGDD=CUMDOSE/TRTDURD) %>%
+  mutate(first1=case_when(!(DISPXDT<=VISIT4DT) & !is.na(DISPXDT) & !is.na(VISIT4DT) ~ VISIT4DT-TRTSDT+1,
+                         (DISPXDT<=VISIT4DT) & !is.na(DISPXDT) & !is.na(VISIT4DT) ~ TRTEDT-TRTSDT+1,
+                         !is.na(DISPXDT) & is.na(VISIT4DT) ~ TRTEDT-TRTSDT+1),
+         first=ifelse(!is.na(as.numeric(first1)) & TRT01PN!=0, first1*54, 0),
+         second1=case_when(!is.na(VISIT4DT) & !is.na(VISIT12DT) ~ VISIT12DT-VISIT4DT+1,
+                          (DISPXDT<=VISIT12DT) & !is.na(DISPXDT) & !is.na(VISIT12DT) ~ TRTEDT-VISIT4DT+1),
+         second=ifelse(!is.na(as.numeric(second1)) & TRT01PN!=0, second1*81, 0),
+         third=ifelse(TRT01PN==0, 0, ifelse((DISPXDT>VISIT12DT),TRTEDT-VISIT12DT+1, NA)*54),
+         CUMDOSE=rowSums(across(c(first,second,third), ~ as.numeric(.)), na.rm=T),
+         CUMDOSE=ifelse(TRT01PN %in% c(0,54), TRT01PN*TRTDURD, CUMDOSE),
+         AVGDD=CUMDOSE/TRTDURD
+  ) %>%
   select(USUBJID, CUMDOSE, AVGDD)
 
 adsl <- derive_vars_merged(
@@ -434,21 +489,25 @@ adsl <- adsl %>%
   derive_vars_dt(
     new_vars_prefix = "RFEN",
     dtc = RFENDTC
-  )
+  ) %>% mutate(DCSREAS=format_DCSREAS(DCDECOD))
 
-metacore <- metacore::spec_to_metacore('/cloud/project/metadata/specs.xlsx', where_sep_sheet = F, quiet = T)
+
+metacore <- metacore::spec_to_metacore('metadata/specs.xlsx', where_sep_sheet = F, quiet = T)
 
 adsl_spec <- metacore %>% select_dataset('ADSL')
 
-adsl <- adsl %>% drop_unspec_vars(adsl_spec) %>% mutate(DCSREAS=NA_character_)
+adsl <- adsl %>% drop_unspec_vars(adsl_spec)
 
+# debugonce(xportr_type)
 adsl <- adsl %>%
-  check_variables(adsl_spec) %>% # Check all variables specified are present and no more
+  check_variables(adsl_spec, dataset_name = "ADSL") %>% # Check all variables specified are present and no more
   # check_ct_data(adsl_spec, na_acceptable = T) %>% # Checks all variables with CT only contain values within the CT
-  order_cols(adsl_spec) %>% # Orders the columns according to the spec
-  sort_by_key(adsl_spec) %>%
-  xportr_label(adsl_spec) %>% # Assigns variable label from metacore specifications
-  xportr_df_label(adsl_spec)
+  order_cols(adsl_spec, dataset_name = "ADSL") %>% # Orders the columns according to the spec
+  sort_by_key(adsl_spec, dataset_name = "ADSL") %>%
+  xportr_label(adsl_spec, domain = "ADSL") %>% # Assigns variable label from metacore specifications
+  # xportr_type(adsl_spec, domain = "ADSL") %>%
+  xportr_df_label(adsl_spec, domain = "ADSL") #%>%
+  # xportr_format(adsl_spec$var_spec %>% mutate_at(c("format"), ~replace_na(.,'')), domain = "ADSL")
 
 # Save output ----
 xportr_write(adsl, "adam/adsl.xpt")
