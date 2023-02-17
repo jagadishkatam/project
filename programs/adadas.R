@@ -44,20 +44,20 @@ param_lookup <- qs %>% filter(QSCAT=="ALZHEIMER'S DISEASE ASSESSMENT SCALE") %>%
 
 format_AWRANGE <- \(x){
   case_when(
-    x=='BASELINE' ~ '<=1',
-    x=='WEEK 8' ~ '2-84',
-    x=='WEEK 16' ~ '85-140',
-    x=='WEEK 24' ~ '>140',
+    x=='Baseline' ~ '<=1',
+    x=='Week 8' ~ '2-84',
+    x=='Week 16' ~ '85-140',
+    x=='Week 24' ~ '>140',
     TRUE ~ NA_character_
   )
 }
 
 format_AWTARGET <- \(x){
   case_when(
-    x=='BASELINE' ~ 1,
-    x=='WEEK 8' ~ 56,
-    x=='WEEK 16' ~ 112,
-    x=='WEEK 24' ~ 168,
+    x=='Baseline' ~ 1,
+    x=='Week 8' ~ 56,
+    x=='Week 16' ~ 112,
+    x=='Week 24' ~ 168,
     TRUE ~ NA_real_
   )
 }
@@ -65,10 +65,10 @@ format_AWTARGET <- \(x){
 
 format_AWLO <- \(x){
   case_when(
-    # x=='BASELINE' ~ NA,
-    x=='WEEK 8' ~ 2,
-    x=='WEEK 16' ~ 85,
-    x=='WEEK 24' ~ 140,
+    # x=='Baseline' ~ NA,
+    x=='Week 8' ~ 2,
+    x=='Week 16' ~ 85,
+    x=='Week 24' ~ 141,
     TRUE ~ NA_real_
   )
 }
@@ -76,10 +76,10 @@ format_AWLO <- \(x){
 
 format_AWHI <- \(x){
   case_when(
-    x=='BASELINE' ~ 1,
-    x=='WEEK 8' ~ 84,
-    x=='WEEK 16' ~ 140,
-    # x=='WEEK 24' ~ NA,
+    x=='Baseline' ~ 1,
+    x=='Week 8' ~ 84,
+    x=='Week 16' ~ 140,
+    # x=='Week 24' ~ NA,
     TRUE ~ NA_real_
   )
 }
@@ -124,10 +124,10 @@ adas <- adas %>%
   mutate(
     ADT = date(ADTM),
     AVISIT = case_when(
-      ADY <=1 ~ 'BASELINE',
-      between(ADY,2,84) ~ 'WEEK 8',
-      between(ADY,85,140) ~ 'WEEK 16',
-      ADY > 140 ~ 'WEEK 24',
+      ADY <=1 ~ 'Baseline',
+      between(ADY,2,84) ~ 'Week 8',
+      between(ADY,85,140) ~ 'Week 16',
+      ADY > 140 ~ 'Week 24',
       TRUE ~ NA_character_
     ),
     AVISITN = as.numeric(
@@ -152,6 +152,13 @@ adas <- derive_locf_records(
   order = vars(AVISITN, AVISIT)
 )
 
+adas_actot <- adas %>% filter(PARAMCD=='ACTOT') %>% arrange(USUBJID, AVISITN, AVISIT) %>%
+  fill(ADT, ADY, VISIT, VISITNUM,TRTSDT, TRTEDT, TRT01A, TRT01P,QSSEQ, .direction = 'down')
+
+adas_actoto <- adas %>% filter(PARAMCD!='ACTOT')
+
+adas <- bind_rows(adas_actoto,adas_actot)
+
 ## Derive baseline flags ----
 adas <- adas %>%
   # Calculate ABLFL
@@ -163,7 +170,8 @@ adas <- adas %>%
       new_var = ABLFL,
       mode = "last"
     ),
-    filter = (!is.na(AVAL) | !is.na(AVALC)) & (QSBLFL=='Y')
+    # filter = (!is.na(AVAL) | !is.na(AVALC)) & (QSBLFL=='Y')
+    filter = ((QSBLFL=='Y'))
   )
 
 ## Derive baseline information ----
@@ -181,22 +189,9 @@ adas <- adas %>%
     new_var = BASEC
   ) %>%
   # Calculate CHG
-  derive_var_chg() %>%
+  derive_var_chg() %>% mutate(CHG=ifelse(!is.na(ABLFL), NA_real_, CHG)) %>%
   # Calculate PCHG
-  derive_var_pchg()
-
-## ANL01FL: Flag last result within an AVISIT and ATPT for post-baseline records ----
-adas <- adas %>%
-  restrict_derivation(
-    derivation = derive_var_extreme_flag,
-    args = params(
-      by_vars = vars(USUBJID, PARAMCD, AVISIT),
-      order = vars(ADT, AVAL),
-      new_var = ANL01FL,
-      mode = "last"
-    ),
-    filter = !is.na(AVISITN)
-  )
+  derive_var_pchg() %>% mutate(PCHG=ifelse(!is.na(ABLFL), NA_real_, PCHG))
 
 ## Get treatment information ----
 # See also the "Visit and Period Variables" vignette
@@ -224,11 +219,23 @@ adadas <- adas %>%
                AWTARGET=format_AWTARGET(AVISIT),
                AWLO=format_AWLO(AVISIT),
                AWHI=format_AWHI(AVISIT),
-               AWTDIFF=ADY-AWTARGET,
+               AWTDIFF=abs(ADY-AWTARGET),
                TRTPN=TRT01PN,
-               AWU='DAYS')
+               AWU='DAYS',
+               PARAM=str_to_title(PARAM))
 
-
+## ANL01FL: Flag last result within an AVISIT and ATPT for post-baseline records ----
+adadas <- adadas %>%
+  restrict_derivation(
+    derivation = derive_var_extreme_flag,
+    args = params(
+      by_vars = vars(USUBJID, PARAMCD, AVISIT),
+      order = vars(AWTDIFF,ADT,AVAL),
+      new_var = ANL01FL,
+      mode = "first"
+    ),
+    filter = !is.na(AVISITN)
+  )
 
 metacore <- metacore::spec_to_metacore('metadata/specs.xlsx', where_sep_sheet = F, quiet = T)
 

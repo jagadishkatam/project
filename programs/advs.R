@@ -88,24 +88,24 @@ advs <- vs %>%
     by_vars = vars(STUDYID, USUBJID)
   ) %>%
   ## Calculate ADT, ADY ----
-  derive_vars_dt(
-    new_vars_prefix = "A",
-    dtc = VSDTC
-  ) %>%
+derive_vars_dt(
+  new_vars_prefix = "A",
+  dtc = VSDTC
+) %>%
   derive_vars_dy(reference_date = TRTSDT, source_vars = vars(ADT))
 
 advs <- advs %>%
   ## Add PARAMCD only - add PARAM etc later ----
-  derive_vars_merged_lookup(
-    dataset_add = param_lookup,
-    new_vars = vars(PARAMCD),
-    by_vars = vars(VSTESTCD)
-  ) %>%
+derive_vars_merged_lookup(
+  dataset_add = param_lookup,
+  new_vars = vars(PARAMCD),
+  by_vars = vars(VSTESTCD)
+) %>%
   ## Calculate AVAL and AVALC ----
-  mutate(
-    AVAL = VSSTRESN,
-    AVALC = VSSTRESC
-  )
+mutate(
+  AVAL = VSSTRESN,
+  AVALC = VSSTRESC
+)
 
 
 ## Get visit info ----
@@ -140,12 +140,12 @@ advs <- advs %>%
 
 advs <- advs %>%
   ## Calculate ONTRTFL ----
-  derive_var_ontrtfl(
-    start_date = ADT,
-    ref_start_date = TRTSDT,
-    ref_end_date = TRTEDT,
-    filter_pre_timepoint = AVISIT == "Baseline"
-  )
+derive_var_ontrtfl(
+  start_date = ADT,
+  ref_start_date = TRTSDT,
+  ref_end_date = TRTEDT,
+  filter_pre_timepoint = AVISIT == "Baseline"
+)
 
 ## Calculate ANRIND : requires the reference ranges ANRLO, ANRHI ----
 # Also accommodates the ranges A1LO, A1HI
@@ -159,10 +159,10 @@ advs <- advs %>%
   # Calculate BASETYPE
   derive_var_basetype(
     basetypes = rlang::exprs(
-      "LAST: AFTER LYING DOWN FOR 5 MINUTES" = ATPTN == 815,
-      "LAST: AFTER STANDING FOR 1 MINUTE" = ATPTN == 816,
-      "LAST: AFTER STANDING FOR 3 MINUTES" = ATPTN == 817,
-      "LAST" = is.na(ATPTN)
+      "AFTER LYING DOWN FOR 5 MINUTES" = ATPTN == 815,
+      "AFTER STANDING FOR 1 MINUTE" = ATPTN == 816,
+      "AFTER STANDING FOR 3 MINUTES" = ATPTN == 817,
+      "LAST" = is.na(ATPTN) & !is.na(AVISIT)
     )
   ) %>%
   # Calculate ABLFL
@@ -175,8 +175,8 @@ advs <- advs %>%
       mode = "last"
     ),
     filter = (!is.na(AVAL) &
-      #ADT <= TRTSDT & !is.na(BASETYPE) & is.na(DTYPE))
-        ADT <= TRTSDT & !is.na(BASETYPE))
+                #ADT <= TRTSDT & !is.na(BASETYPE) & is.na(DTYPE))
+                ADT <= TRTSDT & !is.na(BASETYPE) & !is.na(AVISIT))
   )
 
 ## Derive baseline information ----
@@ -215,7 +215,7 @@ advs <- advs %>%
       order = vars(ADT, AVAL),
       mode = "last"
     ),
-    filter = !is.na(AVISITN) & AVISITN>0 #& ONTRTFL == "Y"
+    filter = !is.na(AVISITN) # & AVISITN>0 & ONTRTFL == "Y"
   )
 
 ## Get treatment information ----
@@ -233,19 +233,19 @@ advs <- advs %>%
   #     mode = "last"
   #   ),
   #   filter = (4 < VISITNUM &
-  #     VISITNUM <= 13 & ANL01FL == "Y")
-  # ) %>%
-  # filter(EOTFL == "Y") %>%
-  # mutate(
-  #   AVISIT = "End of Treatment",
-  #   AVISITN = 99
-  # ) %>%
-  # union_all(advs) %>%
-  # select(-EOTFL) %>%
-  mutate(
-    TRTP = TRT01P,
-    TRTA = TRT01A
-  )
+#     VISITNUM <= 13 & ANL01FL == "Y")
+# ) %>%
+# filter(EOTFL == "Y") %>%
+# mutate(
+#   AVISIT = "End of Treatment",
+#   AVISITN = 99
+# ) %>%
+# union_all(advs) %>%
+# select(-EOTFL) %>%
+mutate(
+  TRTP = TRT01P,
+  TRTA = TRT01A
+)
 
 ## Get ASEQ and AVALCATx and add PARAM/PARAMN ----
 advs <- advs %>%
@@ -270,7 +270,20 @@ advs <- advs %>%
     by_vars = vars(STUDYID, USUBJID, TRT01AN, TRT01PN)
   ) %>%
   mutate(TRTPN=TRT01PN, TRTAN=TRT01AN, PCHG=janitor::round_half_up(PCHG,1),
-         CHG=janitor::round_half_up(CHG,1))
+         CHG=janitor::round_half_up(CHG,1),
+         BASETYPE=ifelse(is.na(ATPT), NA_character_, BASETYPE))
+
+advs <- advs %>%
+  derive_extreme_records(
+    by_vars = vars(STUDYID, USUBJID, PARAMCD, ATPTN),
+    order = vars(ADT, AVISITN, ATPTN, AVAL),
+    mode = "last",
+    filter = (ANL01FL == "Y" & AVISITN<=24),
+    set_values_to = vars(
+      AVISIT = "End of Treatment",
+      AVISITN = 99
+    )
+  )
 
 # Final Steps, Select final variables and Add labels
 # This process will be based on your metadata, no example given for this reason

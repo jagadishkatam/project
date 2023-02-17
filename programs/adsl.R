@@ -385,7 +385,7 @@ trt <- sort(paste(adsl$SITEID,adsl$TRT01PN,sep='_'))
 
 rle <- do.call(cbind,rle(trt)) %>% as_tibble() %>%
   tidyr::extract(values, into = c('SITEID','TRT01PN'), regex = '(.*)_(.*)', convert = T) %>%
-  mutate(SITEGR1=ifelse(as.numeric(lengths)<=3, '900', as.character(SITEID)),
+  mutate(SITEGR1=ifelse(as.numeric(lengths)<3, '900', as.character(SITEID)),
          SITEID=as.character(SITEID), TRT01PN=as.numeric(TRT01PN)) %>%
   select(-lengths)
 
@@ -467,15 +467,16 @@ dosconp <- ds %>% filter(DSCAT=='DISPOSITION EVENT') %>% derive_vars_dt(new_vars
 
 cumdose <- visit4 %>% full_join(visit12, by='USUBJID') %>% full_join(visit26, by='USUBJID') %>%
   full_join(dosconp, by='USUBJID') %>% full_join(adsl %>% select(USUBJID, TRTSDT, TRTEDT, TRT01PN, TRTDURD), by='USUBJID') %>%
-  mutate(first=case_when(!(DISPXDT<=VISIT4DT) & !is.na(DISPXDT) & !is.na(VISIT4DT) ~ VISIT4DT-TRTSDT+1,
+  mutate(first1=case_when(!(DISPXDT<=VISIT4DT) & !is.na(DISPXDT) & !is.na(VISIT4DT) ~ VISIT4DT-TRTSDT+1,
                          (DISPXDT<=VISIT4DT) & !is.na(DISPXDT) & !is.na(VISIT4DT) ~ TRTEDT-TRTSDT+1,
                          !is.na(DISPXDT) & is.na(VISIT4DT) ~ TRTEDT-TRTSDT+1),
-         first=ifelse(!is.na(as.numeric(first)) & TRT01PN!=0, first*54, 0),
-         second=case_when(!is.na(VISIT4DT) & !is.na(VISIT12DT) ~ VISIT12DT-VISIT4DT+1,
+         first=ifelse(!is.na(as.numeric(first1)) & TRT01PN!=0, first1*54, 0),
+         second1=case_when(!is.na(VISIT4DT) & !is.na(VISIT12DT) ~ VISIT12DT-VISIT4DT+1,
                           (DISPXDT<=VISIT12DT) & !is.na(DISPXDT) & !is.na(VISIT12DT) ~ TRTEDT-VISIT4DT+1),
-         second=ifelse(!is.na(as.numeric(second)) & TRT01PN!=0, second*81, 0),
+         second=ifelse(!is.na(as.numeric(second1)) & TRT01PN!=0, second1*81, 0),
          third=ifelse(TRT01PN==0, 0, ifelse((DISPXDT>VISIT12DT),TRTEDT-VISIT12DT+1, NA)*54),
          CUMDOSE=rowSums(across(c(first,second,third), ~ as.numeric(.)), na.rm=T),
+         CUMDOSE=ifelse(TRT01PN %in% c(0,54), TRT01PN*TRTDURD, CUMDOSE),
          AVGDD=CUMDOSE/TRTDURD
   ) %>%
   select(USUBJID, CUMDOSE, AVGDD)
@@ -499,12 +500,14 @@ adsl_spec <- metacore %>% select_dataset('ADSL')
 
 adsl <- adsl %>% drop_unspec_vars(adsl_spec)
 
+# debugonce(xportr_type)
 adsl <- adsl %>%
   check_variables(adsl_spec, dataset_name = "ADSL") %>% # Check all variables specified are present and no more
   # check_ct_data(adsl_spec, na_acceptable = T) %>% # Checks all variables with CT only contain values within the CT
   order_cols(adsl_spec, dataset_name = "ADSL") %>% # Orders the columns according to the spec
   sort_by_key(adsl_spec, dataset_name = "ADSL") %>%
   xportr_label(adsl_spec, domain = "ADSL") %>% # Assigns variable label from metacore specifications
+  # xportr_type(adsl_spec, domain = "ADSL") %>%
   xportr_df_label(adsl_spec, domain = "ADSL") #%>%
   # xportr_format(adsl_spec$var_spec %>% mutate_at(c("format"), ~replace_na(.,'')), domain = "ADSL")
 
