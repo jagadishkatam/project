@@ -1,8 +1,8 @@
-# Name: ADLBC
+# Name: ADTTE
 #
-# Label: Vital Signs Analysis Dataset
+# Label: AE Time To 1st Derm. Event Analysis
 #
-# Input: adsl, vs
+# Input: adsl, ae
 library(admiral)# Contains example datasets from the CDISC pilot project
 library(tidyverse)
 library(lubridate)
@@ -19,11 +19,36 @@ adsl <- haven::read_xpt("adam/adsl.xpt")
 adae <- haven::read_xpt("adam/adae.xpt") %>% filter(CQ01NAM=='DERMATOLOGIC EVENTS' & AOCC01FL=='Y') %>%
   select(STUDYID, USUBJID, ASTDT, AENDT, TRTEMFL, AESEQ)
 
+
+format_racen <- function(x) {
+  case_when(
+    x == 'AMERICAN INDIAN OR ALASKA NATIVE' ~ 6,
+    x == 'ASIAN' ~ 3,
+    x == 'BLACK OR AFRICAN AMERICAN' ~ 2,
+    x == 'WHITE' ~ 1,
+    TRUE ~ NA_real_
+  )
+}
+
+# format_fmt <- function(x) {
+#   case_when(
+#     x == 'AGE' ~ '3.',
+#     x == 'AGEGR1' ~ "$5.",
+#     x == 'AGEGR1N' ~ '3.',
+#     x == 'EVNTDESC' ~ '$25.',
+#     x == 'PARAM' ~ '$32.',
+#     x == 'PARAMCD' ~ '$4.',
+#     x == 'RACE' ~ '$32.',
+#     x == 'RACEN' ~ '3.',
+#     x == 'SAFFL' ~ '$1.'
+#   )
+# }
+
 metacore <- metacore::spec_to_metacore('metadata/specs.xlsx', where_sep_sheet = F, quiet = T)
 
 adtte_spec <- metacore %>% select_dataset('ADTTE')
 
-variables <- names(adsl)[na.omit(match(adtte_spec$ds_vars$variable,names(adsl)))]
+#adtte_spec$var_spec$format <- adtte_spec$var_spec %>% mutate(format=format_fmt(variable))
 
 lstalv <- censor_source(
   dataset_name = "adsl",
@@ -55,11 +80,12 @@ adtte2 <- derive_vars_duration(
 adtte <- derive_vars_merged(
   adtte2,
   dataset_add = adsl,
-  new_vars =vars(STUDYID, SITEID, USUBJID, AGE, AGEGR1, AGEGR1N, RACE, RACEN, SEX, TRTSDT, TRTEDT, SAFFL, TRTDURD, TRT01P, TRT01A, TRT01AN),
+  new_vars =vars(STUDYID, SITEID, USUBJID, AGE, AGEGR1, AGEGR1N, RACE, SEX, TRTSDT, TRTEDT, SAFFL, TRTDURD, TRT01P, TRT01A, TRT01AN),
   by_vars = vars(STUDYID, USUBJID)
 ) %>%
   mutate(TRTP=TRT01P, TRTA=TRT01A, TRTAN=TRT01AN, TRTDUR=TRTDURD,
-         EVNTDESC = ifelse(CNSR==0,"Dermatologic Event Occured",EVNTDESC)
+         EVNTDESC = ifelse(CNSR==0,"Dematologic Event Occured",EVNTDESC),
+         RACEN=format_racen(RACE)
   )
 
 adtte <- adtte %>% drop_unspec_vars(adtte_spec)
@@ -69,10 +95,12 @@ adtte <- adtte %>%
   # check_ct_data(adsl_spec, na_acceptable = T) %>% # Checks all variables with CT only contain values within the CT
   order_cols(adtte_spec, dataset_name = "ADTTE") %>% # Orders the columns according to the spec
   sort_by_key(adtte_spec, dataset_name = "ADTTE") %>%
+  xportr_length(adtte_spec) %>%
   xportr_label(adtte_spec, domain = "ADTTE") %>% # Assigns variable label from metacore specifications
-  xportr_df_label(adtte_spec, domain = "ADTTE") %>%
-  xportr_format(adtte_spec$var_spec %>% mutate_at(c("format"), ~replace_na(.,'')), domain = "ADSL")
+  xportr_df_label(adtte_spec, domain = "ADTTE")  %>%
+   xportr_format(adtte_spec$var_spec %>% mutate_at(c("format"), ~replace_na(.,'')), domain = "ADTTE")
 
 # Save output ----
+
 xportr_write(adtte, "adam/adtte.xpt")
 

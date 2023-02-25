@@ -35,7 +35,7 @@ walk(sdtms, ~read_sdtm(.x))
 # Derivations ----
 
 # Get list of ADSL vars required for derivations
-adsl_vars <- vars(TRTSDT, TRTEDT)
+adsl_vars <- vars(TRTSDT, TRTEDT, RACEN)
 
 adae <- ae %>%
   # join adsl to ae
@@ -204,13 +204,25 @@ adae <- derive_vars_merged(
   by_vars = vars( USUBJID, ASTDT, AESEQ)
 )
 
+format_racen <- function(x) {
+  case_when(
+    x == 'AMERICAN INDIAN OR ALASKA NATIVE' ~ 6,
+    x == 'ASIAN' ~ 3,
+    x == 'BLACK OR AFRICAN AMERICAN' ~ 2,
+    x == 'WHITE' ~ 1,
+    TRUE ~ NA_real_
+  )
+}
 
 adae <- derive_vars_merged(
   adae,
   dataset_add = select(AOCCPFL, USUBJID, ASTDT, AESEQ, AOCCPFL),
   by_vars = vars( USUBJID, ASTDT, AESEQ)
 ) %>%
-  mutate(TRTA=TRT01A, TRTAN=TRT01AN)
+  mutate(TRTA=TRT01A, TRTAN=TRT01AN, RACEN=format_racen(RACE),
+         ADURU=ifelse(!is.na(ADURN) & is.na(ASTDTF), 'DAY', NA_character_),
+         ADURN=ifelse(!is.na(ADURN) & is.na(ASTDTF), ADURN, NA_real_)
+         )
 
 metacore <- metacore::spec_to_metacore('metadata/specs.xlsx', where_sep_sheet = F, quiet = T)
 

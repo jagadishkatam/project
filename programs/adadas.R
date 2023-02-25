@@ -84,6 +84,16 @@ format_AWHI <- \(x){
   )
 }
 
+format_racen <- function(x) {
+  case_when(
+    x == 'AMERICAN INDIAN OR ALASKA NATIVE' ~ 6,
+    x == 'ASIAN' ~ 3,
+    x == 'BLACK OR AFRICAN AMERICAN' ~ 2,
+    x == 'WHITE' ~ 1,
+    TRUE ~ NA_real_
+  )
+}
+
 # Derivations ----
 
 # Get list of ADSL vars required for derivations
@@ -235,7 +245,8 @@ adadas <- adadas %>%
       mode = "first"
     ),
     filter = !is.na(AVISITN)
-  )
+  ) %>%
+  mutate(RACEN=format_racen(RACE))
 
 metacore <- metacore::spec_to_metacore('metadata/specs.xlsx', where_sep_sheet = F, quiet = T)
 

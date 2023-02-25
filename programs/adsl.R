@@ -12,6 +12,7 @@ library(tidyverse)
 library(xportr)
 library(metacore)
 library(metatools)
+library(janitor)
 # Load source datasets ----
 
 # Use e.g. haven::read_sas to read in .sas7bdat, or other suitable functions
@@ -62,7 +63,7 @@ format_bmiblgr1 <- function(x) {
     x < 25 ~ "<25",
     25 <= x & x < 30 ~ "25-<30",
     x >= 30 ~ ">=30",
-    TRUE ~ "Missing"
+    TRUE ~ NA_character_
   )
 }
 
@@ -134,7 +135,7 @@ format_DCSREAS <- function(x) {
     x == "DEATH" ~ "Death",
     x == "WITHDRAWAL BY SUBJECT" ~ "Withdrew Consent",
     x == "PHYSICIAN DECISION" ~ "Physician Decision",
-    x == "PROTOCOL VIOLATION" ~ "I/E Not Met",
+    x == "PROTOCOL VIOLATION" ~ "Protocol Violation",
     x == "LOST TO FOLLOW-UP" ~ "Lost to Follow-up",
     x == "LACK OF EFFICACY" ~ "Lack of Efficacy",
     T ~ NA_character_
@@ -209,7 +210,7 @@ adsl <- adsl %>%
   derive_vars_merged(
     dataset_add = ds_ext,
     by_vars = vars(STUDYID, USUBJID),
-    new_vars = vars(EOSDT = DSSTDT),
+    new_vars = vars(EOSDT = DSSTDT, DSTERM),
     filter_add = DSCAT == "DISPOSITION EVENT" & DSDECOD != "SCREEN FAILURE"
   ) %>%
   # EOS status
@@ -353,7 +354,7 @@ adsl <- derive_vars_merged(
 )
 
 visnumen <- ds %>% filter(DSCAT=='DISPOSITION EVENT') %>%
-  mutate(VISNUMEN=ifelse(DSTERM=='PROTOCOL COMPLETED' & VISITNUM==13, 12, VISITNUM)) %>%
+  mutate(VISNUMEN=ifelse(DSTERM %in% c('PROTOCOL COMPLETED','ADVERSE EVENT') & VISITNUM==13, 12, VISITNUM)) %>%
   select(USUBJID, VISNUMEN)
 
 adsl <- derive_vars_merged(
@@ -384,8 +385,9 @@ trt <- sort(paste(adsl$SITEID,adsl$TRT01PN,sep='_'))
 
 rle <- do.call(cbind,rle(trt)) %>% as_tibble() %>%
   tidyr::extract(values, into = c('SITEID','TRT01PN'), regex = '(.*)_(.*)', convert = T) %>%
-  mutate(SITEGR1=ifelse(as.numeric(lengths)<3, '900', as.character(SITEID)),
-         SITEID=as.character(SITEID), TRT01PN=as.numeric(TRT01PN)) %>%  select(-lengths)
+  mutate(SITEGR1=ifelse(as.numeric(lengths)<3 | SITEID %in% c(715,717), '900', as.character(SITEID)),
+         SITEID=as.character(SITEID),
+         TRT01PN=as.numeric(TRT01PN)) %>%  select(-lengths)
 
 adsl <- derive_vars_merged(
   adsl,
@@ -432,9 +434,22 @@ adsl <- derive_vars_merged(
   by_vars = vars( USUBJID)
 )
 
-adsl <- derive_vars_dy(adsl, reference_date = DISONSDT, source_vars = vars(DURDIS=VISIT1DT)) %>%
-  mutate(DURDIS=round(DURDIS/30.4375,1),DURDSGR1=format_durdsgr1(DURDIS))
 
+adsl$DURDIS <- compute_duration(
+  adsl$DISONSDT,
+  adsl$VISIT1DT,
+  in_unit = "days",
+  out_unit = "months",
+  floor_in = TRUE,
+  add_one = TRUE,
+  trunc_out = FALSE
+)
+
+
+adsl <- adsl %>%
+  mutate(DURDIS=round(DURDIS,1),
+         DURDSGR1=format_durdsgr1(DURDIS)
+         )
 
 COMPFL <- metatools::combine_supp(dm,suppdm) %>%
   transmute(COMP8FL=COMPLT8,COMP16FL=COMPLT16,COMP24FL=COMPLT24, USUBJID=USUBJID, EFFFL=EFFICACY, ITTFL=ITT)
@@ -442,7 +457,7 @@ COMPFL <- metatools::combine_supp(dm,suppdm) %>%
 adsl <- derive_vars_merged(
   adsl,
   dataset_add = select(COMPFL, USUBJID, COMP8FL, COMP16FL, COMP24FL, ITTFL, EFFFL),
-  by_vars = vars( USUBJID)) %>% 
+  by_vars = vars( USUBJID)) %>%
   mutate(COMP8FL=ifelse(is.na(COMP8FL),'N', COMP8FL),
              COMP16FL=ifelse(is.na(COMP16FL),'N', COMP16FL),
              COMP24FL=ifelse(is.na(COMP24FL),'N', COMP24FL),
@@ -450,47 +465,37 @@ adsl <- derive_vars_merged(
              EFFFL=ifelse(is.na(EFFFL),'N', EFFFL)
 )
 
-
-visit4 <- sv %>% filter(VISIT=='WEEK 4') %>% derive_vars_dt(new_vars_prefix = "VISIT4", dtc = SVENDTC) %>%
-  select(USUBJID, VISIT4DT)
-
-visit12 <- sv %>% filter(VISIT=='WEEK 12') %>% derive_vars_dt(new_vars_prefix = "VISIT12", dtc = SVENDTC) %>%
-  select(USUBJID, VISIT12DT)
-
-visit26 <- sv %>% filter(VISIT=='WEEK 26') %>% derive_vars_dt(new_vars_prefix = "VISIT26", dtc = SVENDTC) %>%
-  select(USUBJID, VISIT26DT)
-
 dosconp <- ds %>% filter(DSCAT=='DISPOSITION EVENT') %>% derive_vars_dt(new_vars_prefix = "DISPX", dtc = DSSTDTC) %>%
   select(USUBJID, DISPXDT)
 
-cumdose <- visit4 %>% full_join(visit12, by='USUBJID') %>% full_join(visit26, by='USUBJID') %>%
-  full_join(dosconp, by='USUBJID') %>% full_join(adsl %>% select(USUBJID, TRTSDT, TRTEDT, TRT01PN, TRTDURD), by='USUBJID') %>%
-  mutate(first1=case_when(!(DISPXDT<=VISIT4DT) & !is.na(DISPXDT) & !is.na(VISIT4DT) ~ VISIT4DT-TRTSDT+1,
-                         (DISPXDT<=VISIT4DT) & !is.na(DISPXDT) & !is.na(VISIT4DT) ~ TRTEDT-TRTSDT+1,
-                         !is.na(DISPXDT) & is.na(VISIT4DT) ~ TRTEDT-TRTSDT+1),
-         first=ifelse(!is.na(as.numeric(first1)) & TRT01PN!=0, first1*54, 0),
-         second1=case_when(!is.na(VISIT4DT) & !is.na(VISIT12DT) ~ VISIT12DT-VISIT4DT+1,
-                          (DISPXDT<=VISIT12DT) & !is.na(DISPXDT) & !is.na(VISIT12DT) ~ TRTEDT-VISIT4DT+1),
-         second=ifelse(!is.na(as.numeric(second1)) & TRT01PN!=0, second1*81, 0),
-         third=ifelse(TRT01PN==0, 0, ifelse((DISPXDT>VISIT12DT),TRTEDT-VISIT12DT+1, NA)*54),
-         CUMDOSE=rowSums(across(c(first,second,third), ~ as.numeric(.)), na.rm=T),
-         CUMDOSE=ifelse(TRT01PN %in% c(0,54), TRT01PN*TRTDURD, CUMDOSE),
-         AVGDD=CUMDOSE/TRTDURD
-  ) %>%
-  select(USUBJID, CUMDOSE, AVGDD)
+ex1 <- ex %>% derive_vars_dt(new_vars_prefix = "AST", dtc = EXSTDTC) %>%
+  derive_vars_dt(new_vars_prefix = "AEN", dtc = EXENDTC) %>%
+  select(USUBJID, VISIT, VISITNUM, EXDOSE, ASTDT, AENDT)
 
-adsl <- derive_vars_merged(
-  adsl,
-  dataset_add = select(cumdose, USUBJID, CUMDOSE, AVGDD),
-  by_vars = vars( USUBJID)
+data1 <- ex1 %>% left_join(adsl %>% select(USUBJID, TRT01PN), by='USUBJID') %>%
+  group_by(USUBJID) %>% mutate(row=row_number(), max=max(row)) %>% ungroup()
+
+data2 <- data1 %>% left_join(dosconp, by='USUBJID') %>%
+  mutate(AENDT=ifelse(row==max & is.na(AENDT) & !is.na(DISPXDT), DISPXDT, AENDT),
+         AENDT=as.Date(AENDT, origin='1970-01-01')) %>%
+  mutate(cum=(AENDT-ASTDT+1)*EXDOSE) %>% group_by(USUBJID) %>%
+  summarise(CUMDOSE=as.numeric(sum(cum, na.rm = T))) %>%
+  ungroup()
+
+adsl <- adsl %>%
+  derive_vars_merged(
+  dataset_add = select(data2, USUBJID, CUMDOSE),
+  by_vars = vars(USUBJID)
 )
 
 adsl <- adsl %>%
   derive_vars_dt(
     new_vars_prefix = "RFEN",
     dtc = RFENDTC
-  ) %>% mutate(DCSREAS=format_DCSREAS(DCDECOD))
-
+  ) %>%
+  mutate(DCSREAS=ifelse(DSTERM=='PROTOCOL ENTRY CRITERIA NOT MET', 'I/E Not Met', format_DCSREAS(DCDECOD)),
+         AVGDD=round(CUMDOSE/TRTDURD,1)
+         )
 
 metacore <- metacore::spec_to_metacore('metadata/specs.xlsx', where_sep_sheet = F, quiet = T)
 

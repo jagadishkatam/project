@@ -75,12 +75,22 @@ format_avalcat1n <- function(param, aval) {
   )
 }
 
+format_racen <- function(x) {
+  case_when(
+    x == 'AMERICAN INDIAN OR ALASKA NATIVE' ~ 6,
+    x == 'ASIAN' ~ 3,
+    x == 'BLACK OR AFRICAN AMERICAN' ~ 2,
+    x == 'WHITE' ~ 1,
+    TRUE ~ NA_real_
+  )
+}
+
 # Derivations ----
 
 # Get list of ADSL vars required for derivations
 adsl_vars <- vars(TRTSDT, TRTEDT, TRT01A, TRT01P,TRT01AN, TRT01PN,SITEID,AGE, AGEGR1N, RACE, RACEN, SEX, SAFFL, AGEGR1)
 
-advs <- vs %>%
+advs1 <- vs %>%
   # Join ADSL with VS (need TRTSDT for ADY derivation)
   derive_vars_merged(
     dataset_add = adsl,
@@ -94,7 +104,7 @@ derive_vars_dt(
 ) %>%
   derive_vars_dy(reference_date = TRTSDT, source_vars = vars(ADT))
 
-advs <- advs %>%
+advs2 <- advs1 %>%
   ## Add PARAMCD only - add PARAM etc later ----
 derive_vars_merged_lookup(
   dataset_add = param_lookup,
@@ -111,7 +121,7 @@ mutate(
 ## Get visit info ----
 # See also the "Visit and Period Variables" vignette
 # (https://pharmaverse.github.io/admiral/articles/visits_periods.html#visits)
-advs <- advs %>%
+advs3 <- advs2 %>%
   # Derive Timing
   mutate(
     ATPTN = VSTPTNUM,
@@ -138,7 +148,7 @@ advs <- advs %>%
 #     set_values_to = vars(DTYPE = "AVERAGE")
 #   )
 
-advs <- advs %>%
+advs4 <- advs3 %>%
   ## Calculate ONTRTFL ----
 derive_var_ontrtfl(
   start_date = ADT,
@@ -149,38 +159,38 @@ derive_var_ontrtfl(
 
 ## Calculate ANRIND : requires the reference ranges ANRLO, ANRHI ----
 # Also accommodates the ranges A1LO, A1HI
-advs <- advs %>%
+advs5 <- advs4 %>%
   derive_vars_merged(dataset_add = range_lookup, by_vars = vars(PARAMCD)) %>%
   # Calculate ANRIND
   derive_var_anrind()
 
 ## Derive baseline flags ----
-advs <- advs %>%
+advs6 <- advs5 %>% mutate(BASETYPE=ATPT) %>%
   # Calculate BASETYPE
-  derive_var_basetype(
-    basetypes = rlang::exprs(
-      "AFTER LYING DOWN FOR 5 MINUTES" = ATPTN == 815,
-      "AFTER STANDING FOR 1 MINUTE" = ATPTN == 816,
-      "AFTER STANDING FOR 3 MINUTES" = ATPTN == 817,
-      "LAST" = is.na(ATPTN) & !is.na(AVISIT)
-    )
-  ) %>%
+  # derive_var_basetype(
+  #   basetypes = rlang::exprs(
+  #     "AFTER LYING DOWN FOR 5 MINUTES" = ATPTN == 815,
+  #     "AFTER STANDING FOR 1 MINUTE" = ATPTN == 816,
+  #     "AFTER STANDING FOR 3 MINUTES" = ATPTN == 817,
+  #     "LAST" = is.na(ATPTN) & !is.na(AVISIT)
+  #   )
+  # ) %>%
   # Calculate ABLFL
   restrict_derivation(
     derivation = derive_var_extreme_flag,
     args = params(
-      by_vars = vars(STUDYID, USUBJID, BASETYPE, PARAMCD),
+      by_vars = vars(STUDYID, USUBJID, PARAMCD, ATPT),
       order = vars(ADT, VISITNUM, VSSEQ),
       new_var = ABLFL,
       mode = "last"
     ),
     filter = (!is.na(AVAL) &
-                #ADT <= TRTSDT & !is.na(BASETYPE) & is.na(DTYPE))
-                ADT <= TRTSDT & !is.na(BASETYPE) & !is.na(AVISIT))
+                #ADT <= TRTSDT & !is.na(BASETYPE) & is.na(AVISIT))
+                ADT <= TRTSDT & !is.na(AVISIT))
   )
 
 ## Derive baseline information ----
-advs <- advs %>%
+advs7 <- advs6 %>%
   # Calculate BASE
   derive_var_base(
     by_vars = vars(STUDYID, USUBJID, PARAMCD, BASETYPE),
@@ -206,7 +216,7 @@ advs <- advs %>%
 
 
 ## ANL01FL: Flag last result within an AVISIT and ATPT for post-baseline records ----
-advs <- advs %>%
+advs8 <- advs7 %>%
   restrict_derivation(
     derivation = derive_var_extreme_flag,
     args = params(
@@ -221,7 +231,7 @@ advs <- advs %>%
 ## Get treatment information ----
 # See also the "Visit and Period Variables" vignette
 # (https://pharmaverse.github.io/admiral/articles/visits_periods.html#treatment_bds)
-advs <- advs %>%
+advs9 <- advs8 %>%
   # Assign TRTA, TRTP
   # Create End of Treatment Record
   # restrict_derivation(
@@ -248,7 +258,7 @@ mutate(
 )
 
 ## Get ASEQ and AVALCATx and add PARAM/PARAMN ----
-advs <- advs %>%
+advs10 <- advs9 %>%
   # Calculate ASEQ
   derive_var_obs_number(
     new_var = ASEQ,
@@ -264,26 +274,30 @@ advs <- advs %>%
 
 
 # Add all ADSL variables
-advs <- advs %>%
+advs11 <- advs10 %>%
   derive_vars_merged(
     dataset_add = select(adsl, STUDYID, USUBJID, TRT01AN, TRT01PN),
     by_vars = vars(STUDYID, USUBJID, TRT01AN, TRT01PN)
   ) %>%
-  mutate(TRTPN=TRT01PN, TRTAN=TRT01AN, PCHG=janitor::round_half_up(PCHG,1),
-         CHG=janitor::round_half_up(CHG,1),
-         BASETYPE=ifelse(is.na(ATPT), NA_character_, BASETYPE))
+  mutate(TRTPN=TRT01PN,
+         TRTAN=TRT01AN
+         #PCHG= janitor::round_half_up(PCHG,1),
+         # CHG=janitor::round_half_up(CHG,1),
+         # BASETYPE=ifelse(is.na(ATPT), NA_character_, BASETYPE)
+         )
 
-advs <- advs %>%
+advs <- advs11 %>%
   derive_extreme_records(
     by_vars = vars(STUDYID, USUBJID, PARAMCD, ATPTN),
     order = vars(ADT, AVISITN, ATPTN, AVAL),
     mode = "last",
-    filter = (ANL01FL == "Y" & AVISITN<=24),
+    filter = (is.na(ABLFL) & between(AVISITN,4,26) & !is.na(AVISIT)),
     set_values_to = vars(
       AVISIT = "End of Treatment",
       AVISITN = 99
     )
-  )
+  ) %>%
+  mutate(RACEN=format_racen(RACE))
 
 # Final Steps, Select final variables and Add labels
 # This process will be based on your metadata, no example given for this reason
