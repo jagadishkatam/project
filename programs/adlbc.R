@@ -1,8 +1,8 @@
-# Name: ADVS
+# Name: ADLBC
 #
-# Label: Vital Signs Analysis Dataset
+# Label: Analysis Dataset Lab Blood Chemistry
 #
-# Input: adsl, vs
+# Input: adsl, lb
 library(admiral)# Contains example datasets from the CDISC pilot project
 library(tidyverse)
 library(lubridate)
@@ -11,6 +11,7 @@ library(purrr)
 library(xportr)
 library(metacore)
 library(metatools)
+library(data.table)
 # Load source datasets ----
 
 # Use e.g. `haven::read_sas()` to read in .sas7bdat, or other suitable functions
@@ -61,7 +62,7 @@ param_lookup <- paramcd %>%
 # Get list of ADSL vars required for derivations
 adsl_vars <- vars(SUBJID, TRTSDT, TRTEDT, TRT01A, TRT01P,TRT01AN, TRT01PN, SITEID,AGE, AGEGR1N, RACE, RACEN, SEX, SAFFL, AGEGR1, COMP24FL, DSRAEFL)
 
-adlbc1 <- lb1 %>% filter(LBCAT=='CHEMISTRY') %>%
+adlbc1 <- lb1 %>% filter(LBCAT=='CHEMISTRY' & !(VISITNUM %in% c(6,201))) %>%
   # Join ADSL with VS (need TRTSDT for ADY derivation)
   derive_vars_merged(
     dataset_add = adsl,
@@ -74,6 +75,23 @@ adlbc1 <- lb1 %>% filter(LBCAT=='CHEMISTRY') %>%
     dtc = LBDTC
   ) %>%
   derive_vars_dy(reference_date = TRTSDT, source_vars = vars(ADT))
+
+format_aind <- function(x,y,z) {
+  case_when(
+    x < y ~ 'L',
+    between(x, y, z) ~ 'N',
+    x > z ~ 'H',
+    TRUE ~ 'N'
+  )
+}
+
+format_bind <- function(x,y,z) {
+  case_when(
+    x < y ~ 'L',
+    between(x, y, z) ~ 'N',
+    x > z ~ 'H'
+  )
+}
 
 adlbc2 <- adlbc1 %>%
   ## Add PARAMCD only - add PARAM etc later ----
@@ -88,9 +106,19 @@ adlbc2 <- adlbc1 %>%
     AVALC = LBSTRESC,
     A1HI = LBSTNRHI,
     A1LO = LBSTNRLO,
-    ANRIND = LBNRIND,
-    PARCAT1 = 'CHEM'
-  )
+    # ANRIND = LBNRIND,
+    PARCAT1 = 'CHEM',
+    ANRHI = (1.5*A1HI),
+    ANRLO = (0.5*A1LO),
+    # ANRIND=case_when(AVAL<ANRLO ~ 'L',
+    #                  between(AVAL,ANRLO,ANRHI) ~ 'N',
+    #                  AVAL>ANRHI ~ 'H',
+    #                  TRUE ~ NA_character_
+    # )
+    # ANRIND=ifelse(AVAL<ANRLO,'L', ifelse(between(AVAL,ANRLO, ANRHI), 'N', ifelse(AVAL>ANRHI, 'H', NA_character_)))
+    ANRIND = format_aind(AVAL, ANRLO, ANRHI)
+    )
+
 
 
 ## Get visit info ----
@@ -179,17 +207,19 @@ adlbc5 <- adlbc4 %>%
   # Calculate CHG
   derive_var_chg() %>%
   # Calculate PCHG
-  derive_var_pchg()
+  derive_var_pchg() %>%
+  mutate(BNRIND=format_bind(BASE, ANRLO, ANRHI)
+  )
 
 
 adlbc6 <- adlbc5 %>%
-  derive_var_analysis_ratio(numer_var = AVAL,
-                                  denom_var = BA1LO,
+  derive_var_analysis_ratio(numer_var = BASE,
+                                  denom_var = A1LO,
                                   new_var = BR2A1LO
                                   ) %>%
                      derive_var_analysis_ratio(
-                                    numer_var = AVAL,
-                                    denom_var = BA1HI,
+                                    numer_var = BASE,
+                                    denom_var = A1HI,
                                     new_var = BR2A1HI
                                   ) %>%
                     derive_var_analysis_ratio(
@@ -201,12 +231,12 @@ adlbc6 <- adlbc5 %>%
                                     numer_var = AVAL,
                                     denom_var = A1HI,
                                     new_var = R2A1HI
-                                 ) %>%
-                    mutate(BR2A1LO=round(BR2A1LO,1),
-                           BR2A1HI=round(BR2A1HI,1),
-                           R2A1LO=round(R2A1LO,1),
-                           R2A1HI=round(R2A1HI,1)
-                           )
+                                 ) # %>%
+                    # mutate(BR2A1LO=round(BR2A1LO,1),
+                    #        BR2A1HI=round(BR2A1HI,1),
+                    #        R2A1LO=round(R2A1LO,1),
+                    #        R2A1HI=round(R2A1HI,1)
+                    #        )
 
 # adlbcx <- adlbc7 %>% select(!!!negate_vars(adsl_vars))
 
@@ -223,11 +253,26 @@ adlbc7 <- adlbc6 %>%
     ),
     filter = (VISITNUM==12| (!is.na(AVISIT) & VISITNUM<12 & is.na(ABLFL)))
   ) %>% rowwise() %>%
-  mutate(ALBTRVAL1= LBSTRESN-(1.5*A1HI),
-         ALBTRVAL2= (0.5*A1LO) - LBSTRESN,
-         ALBTRVAL = ifelse(!is.na(ALBTRVAL1) & !is.na(ALBTRVAL2),max(across(c(ALBTRVAL1,ALBTRVAL2)), na.rm = T),NA_real_),
+  mutate(ALBTRVAL1= (1.5*A1HI)-LBSTRESN,
+         ALBTRVAL2= LBSTRESN-(0.5*A1LO),
+         # ALBTRVAL = ifelse(!is.na(ALBTRVAL1) & !is.na(ALBTRVAL2),max(across(c(ALBTRVAL1,ALBTRVAL2)), na.rm = T),NA_real_),
          CHG = ifelse(!is.na(ABLFL), NA, CHG)
          )
+
+
+adlbc7 <- as.data.table(adlbc7)
+
+adlbc7[, ALBTRVAL := pmax(ALBTRVAL1,ALBTRVAL2, na.rm = T)]
+
+format_racen <- function(x) {
+  case_when(
+    x == 'AMERICAN INDIAN OR ALASKA NATIVE' ~ 6,
+    x == 'ASIAN' ~ 3,
+    x == 'BLACK OR AFRICAN AMERICAN' ~ 2,
+    x == 'WHITE' ~ 1,
+    TRUE ~ NA_real_
+  )
+}
 
 ## Get treatment information ----
 # See also the "Visit and Period Variables" vignette
@@ -235,17 +280,16 @@ adlbc7 <- adlbc6 %>%
 adlbc <- adlbc7 %>%
   # Assign TRTA, TRTP
   # Create End of Treatment Record
-  # restrict_derivation(
-  #   derivation = derive_var_extreme_flag,
-  #   args = params(
-  #     by_vars = vars(STUDYID, USUBJID, PARAMCD, ATPTN),
-  #     order = vars(ADT),
-  #     new_var = EOTFL,
-  #     mode = "last"
-  #   ),
-  #   filter = (4 < VISITNUM &
-  #     VISITNUM <= 13 & ANL01FL == "Y")
-  # ) %>%
+  restrict_derivation(
+    derivation = derive_var_extreme_flag,
+    args = params(
+      by_vars = vars(STUDYID, USUBJID, PARAMCD),
+      order = vars(desc(ALBTRVAL), AVISITN),
+      new_var = ANL01FL,
+      mode = "first"
+    ),
+    filter = (is.na(ABLFL) & !is.na(AVISIT) & AVISITN<=24 & !is.na(ALBTRVAL))
+  )  %>%
   # filter(EOTFL == "Y") %>%
   # mutate(
   #   AVISIT = "End of Treatment",
@@ -258,20 +302,20 @@ adlbc <- adlbc7 %>%
     TRTPN = TRT01PN,
     TRTA = TRT01A,
     TRTAN = TRT01AN,
-    ANL01FL = NA_character_
-  )
+    RACEN=format_racen(RACE)
+)
 
-# adlbc <- adlbc %>%
-#   derive_extreme_records(
-#     by_vars = vars(STUDYID, USUBJID, PARAMCD),
-#     order = vars(ADT, AVISITN, AVAL),
-#     mode = "last",
-#     filter = (ANL01FL == "Y" & AVISITN<=24),
-#     set_values_to = vars(
-#       AVISIT = "End of Treatment",
-#       AVISITN = 99
-#     )
-#   )
+adlbc <- adlbc %>%
+  derive_extreme_records(
+    by_vars = vars(STUDYID, USUBJID, PARAMCD),
+    order = vars(ADT, AVISITN, AVAL),
+    mode = "last",
+    filter = (is.na(ABLFL) & AVISITN<=24 & !is.na(AVISIT)),
+    set_values_to = vars(
+      AVISIT = "End of Treatment",
+      AVISITN = 99
+    )
+  )
 
 ## Get ASEQ and AVALCATx and add PARAM/PARAMN ----
 # advs <- advs %>%
@@ -302,16 +346,20 @@ adlbc <- adlbc7 %>%
 # This process will be based on your metadata, no example given for this reason
 # ...
 
-adlbc <- adlbc %>% drop_unspec_vars(adlbc_spec)
+adlbc <- adlbc %>% drop_unspec_vars(adlbc_spec) %>%
+  mutate(across(c(TRTSDT,TRTEDT,ADT),~ . - as.Date('1960-01-01')))
 
 adlbc <- adlbc %>%
   check_variables(adlbc_spec) %>% # Check all variables specified are present and no more
   # check_ct_data(adsl_spec, na_acceptable = T) %>% # Checks all variables with CT only contain values within the CT
   order_cols(adlbc_spec) %>% # Orders the columns according to the spec
+  # xportr_length(adlbc_spec) %>%
   sort_by_key(adlbc_spec) %>%
   xportr_label(adlbc_spec) %>% # Assigns variable label from metacore specifications
-  xportr_df_label(adlbc_spec) %>%
-  xportr_format(adlbc_spec$var_spec %>% mutate_at(c("format"), ~replace_na(.,'')), domain = "ADLBC")
+  xportr_df_label(adlbc_spec) # %>%
+  # xportr_format(adlbc_spec$var_spec %>% mutate_at(c("format"), ~replace_na(.,'')) %>%
+  #                 mutate(format=ifelse(format=='DATE9.', NA_real_, format)), domain = "ADLBC")
+
 
 # Save output ----
 xportr_write(adlbc, "adam/adlbc.xpt")

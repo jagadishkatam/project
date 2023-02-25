@@ -1,8 +1,8 @@
-# Name: ADVS
+# Name: ADLBH
 #
-# Label: Vital Signs Analysis Dataset
+# Label: Analysis Dataset Lab Hematology
 #
-# Input: adsl, vs
+# Input: adsl, lb
 library(admiral)# Contains example datasets from the CDISC pilot project
 library(tidyverse)
 library(lubridate)
@@ -58,18 +58,21 @@ param_lookup <- paramcd %>%
   )
 
 
-format_BNRIND <- \(x){
-  case_when(x=='NORMAL' ~ 'N',
-            x=='ABNORMAL' ~ 'H',
-            x=='LOW' ~ 'N')
+format_aind <- function(x,y,z) {
+  case_when(
+    x < y ~ 'L',
+    between(x, y, z) ~ 'N',
+    x > z ~ 'H',
+    TRUE ~ 'N'
+  )
 }
 
-
-
-format_ANRIND <- \(x){
-  case_when(x=='NORMAL' ~ 'N',
-            x=='ABNORMAL' ~ 'H',
-            x=='LOW' ~ 'N')
+format_bind <- function(x,y,z) {
+  case_when(
+    x < y ~ 'L',
+    between(x, y, z) ~ 'N',
+    x > z ~ 'H'
+  )
 }
 
 # Derivations ----
@@ -77,7 +80,7 @@ format_ANRIND <- \(x){
 # Get list of ADSL vars required for derivations
 adsl_vars <- vars(SUBJID, TRTSDT, TRTEDT, TRT01A, TRT01P,TRT01AN, TRT01PN, SITEID,AGE, AGEGR1N, RACE, RACEN, SEX, SAFFL, AGEGR1, COMP24FL, DSRAEFL)
 
-adlbh1 <- lb1 %>% filter(LBCAT=='HEMATOLOGY') %>%
+adlbh1 <- lb1 %>% filter(LBCAT=='HEMATOLOGY' & !(VISITNUM %in% c(6,201))) %>%
   # Join ADSL with VS (need TRTSDT for ADY derivation)
   derive_vars_merged(
     dataset_add = adsl,
@@ -105,7 +108,11 @@ mutate(
   A1HI = LBSTNRHI,
   A1LO = LBSTNRLO,
   ANRIND = LBNRIND,
-  PARCAT1 = 'HEM'
+  ANRHI = (1.5*A1HI),
+  ANRLO = (0.5*A1LO),
+  PARCAT1 = 'HEM',
+  ANRIND = format_aind(AVAL, ANRLO, ANRHI),
+  ANRIND = ifelse(is.na(ANRLO) & is.na(ANRHI) & LBNRIND=='ABNORMAL', 'H', ANRIND)
 )
 
 
@@ -195,17 +202,20 @@ adlbh5 <- adlbh4 %>%
   # Calculate CHG
   derive_var_chg() %>%
   # Calculate PCHG
-  derive_var_pchg()
+  derive_var_pchg() %>%
+  mutate(BNRIND=format_bind(BASE, ANRLO, ANRHI),
+         BNRIND = ifelse(BNRIND=='N' & LBNRIND=='ABNORMAL', 'H', BNRIND)
+  )
 
 
 adlbh6 <- adlbh5 %>%
   derive_var_analysis_ratio(numer_var = BASE,
-                            denom_var = BA1LO,
+                            denom_var = A1LO,
                             new_var = BR2A1LO
   ) %>%
   derive_var_analysis_ratio(
     numer_var = BASE,
-    denom_var = BA1HI,
+    denom_var = A1HI,
     new_var = BR2A1HI
   ) %>%
   derive_var_analysis_ratio(
@@ -239,29 +249,43 @@ adlbh7 <- adlbh6 %>%
     ),
     filter = (VISITNUM==12| (!is.na(AVISIT) & VISITNUM<12 & is.na(ABLFL)))
   ) %>% rowwise() %>%
-  mutate(ALBTRVAL1= abs(LBSTRESN-(1.5*A1HI)),
-         ALBTRVAL2= abs((0.5*A1LO) - LBSTRESN),
-         ALBTRVAL = ifelse(!is.na(ALBTRVAL1) & !is.na(ALBTRVAL2),max(across(c(ALBTRVAL1,ALBTRVAL2)), na.rm = T),NA_real_),
+  mutate(ALBTRVAL1= (1.5*A1HI)-LBSTRESN,
+         ALBTRVAL2= LBSTRESN-(0.5*A1LO),
+         # ALBTRVAL = ifelse(!is.na(ALBTRVAL1) & !is.na(ALBTRVAL2),max(across(c(ALBTRVAL1,ALBTRVAL2)), na.rm = T),NA_real_),
          CHG = ifelse(!is.na(ABLFL), NA, CHG)
   )
+
+
+adlbh7 <- as.data.table(adlbh7)
+
+adlbh7[, ALBTRVAL := pmax(ALBTRVAL1,ALBTRVAL2, na.rm = T)]
+
+format_racen <- function(x) {
+  case_when(
+    x == 'AMERICAN INDIAN OR ALASKA NATIVE' ~ 6,
+    x == 'ASIAN' ~ 3,
+    x == 'BLACK OR AFRICAN AMERICAN' ~ 2,
+    x == 'WHITE' ~ 1,
+    TRUE ~ NA_real_
+  )
+}
 
 ## Get treatment information ----
 # See also the "Visit and Period Variables" vignette
 # (https://pharmaverse.github.io/admiral/articles/visits_periods.html#treatment_bds)
-adlbh <- adlbh7 %>%
+adlbh8 <- adlbh7 %>%
   # Assign TRTA, TRTP
   # Create End of Treatment Record
-  # restrict_derivation(
-  #   derivation = derive_var_extreme_flag,
-  #   args = params(
-  #     by_vars = vars(STUDYID, USUBJID, PARAMCD, ATPTN),
-  #     order = vars(ADT),
-  #     new_var = EOTFL,
-  #     mode = "last"
-  #   ),
-  #   filter = (4 < VISITNUM &
-#     VISITNUM <= 13 & ANL01FL == "Y")
-# ) %>%
+restrict_derivation(
+  derivation = derive_var_extreme_flag,
+  args = params(
+    by_vars = vars(STUDYID, USUBJID, PARAMCD),
+    order = vars(desc(ALBTRVAL), AVISITN),
+    new_var = ANL01FL,
+    mode = "first"
+  ),
+  filter = (is.na(ABLFL) & !is.na(AVISIT) & AVISITN<=24 & !is.na(ALBTRVAL))
+) %>%
 # filter(EOTFL == "Y") %>%
 # mutate(
 #   AVISIT = "End of Treatment",
@@ -274,22 +298,23 @@ mutate(
   TRTPN = TRT01PN,
   TRTA = TRT01A,
   TRTAN = TRT01AN,
-  ANL01FL = NA_character_,
-  ANRIND=format_ANRIND(ANRIND),
-  BNRIND=format_BNRIND(BNRIND)
+  RACEN=format_racen(RACE)
 )
 
-# adlbc <- adlbc %>%
-#   derive_extreme_records(
-#     by_vars = vars(STUDYID, USUBJID, PARAMCD),
-#     order = vars(ADT, AVISITN, AVAL),
-#     mode = "last",
-#     filter = (ANL01FL == "Y" & AVISITN<=24),
-#     set_values_to = vars(
-#       AVISIT = "End of Treatment",
-#       AVISITN = 99
-#     )
-#   )
+adlbh9 <- adlbh8 %>%
+  derive_extreme_records(
+    by_vars = vars(STUDYID, USUBJID, PARAMCD),
+    order = vars(ADT, AVISITN, AVAL),
+    mode = "last",
+    filter = (is.na(ABLFL) & AVISITN<=24 & !is.na(AVISIT)),
+    set_values_to = vars(
+      AVISIT = "End of Treatment",
+      AVISITN = 99
+    )
+  ) %>%
+  mutate(A1LO=ifelse(A1LO==0, NA_real_, A1LO),
+         flg=ifelse(is.na(AVISITN) & AVISIT=='Baseline', 'Y', NA_character_)
+         )
 
 ## Get ASEQ and AVALCATx and add PARAM/PARAMN ----
 # advs <- advs %>%
@@ -320,7 +345,8 @@ mutate(
 # This process will be based on your metadata, no example given for this reason
 # ...
 
-adlbh <- adlbh %>% drop_unspec_vars(adlbh_spec)
+adlbh <- adlbh9 %>% filter(is.na(flg)) %>% drop_unspec_vars(adlbh_spec) %>%
+  mutate(across(c(TRTSDT,TRTEDT,ADT),~ . - as.Date('1960-01-01')))
 
 adlbh <- adlbh %>%
   check_variables(adlbh_spec) %>% # Check all variables specified are present and no more
@@ -328,8 +354,8 @@ adlbh <- adlbh %>%
   order_cols(adlbh_spec) %>% # Orders the columns according to the spec
   sort_by_key(adlbh_spec) %>%
   xportr_label(adlbh_spec) %>% # Assigns variable label from metacore specifications
-  xportr_df_label(adlbh_spec) %>%
-  xportr_format(adlbh_spec$var_spec %>% mutate_at(c("format"), ~replace_na(.,'')), domain = "ADLBC")
+  xportr_df_label(adlbh_spec) # %>%
+  # xportr_format(adlbh_spec$var_spec %>% mutate_at(c("format"), ~replace_na(.,'')), domain = "ADLBC")
 
 # Save output ----
 xportr_write(adlbh, "adam/adlbh.xpt")
