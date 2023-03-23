@@ -30,19 +30,8 @@ format_racen <- function(x) {
   )
 }
 
-# format_fmt <- function(x) {
-#   case_when(
-#     x == 'AGE' ~ '3.',
-#     x == 'AGEGR1' ~ "$5.",
-#     x == 'AGEGR1N' ~ '3.',
-#     x == 'EVNTDESC' ~ '$25.',
-#     x == 'PARAM' ~ '$32.',
-#     x == 'PARAMCD' ~ '$4.',
-#     x == 'RACE' ~ '$32.',
-#     x == 'RACEN' ~ '3.',
-#     x == 'SAFFL' ~ '$1.'
-#   )
-# }
+
+
 
 metacore <- metacore::spec_to_metacore('metadata/specs.xlsx', where_sep_sheet = F, quiet = T)
 
@@ -88,6 +77,7 @@ adtte <- derive_vars_merged(
          RACEN=format_racen(RACE)
   )
 
+
 adtte <- adtte %>% drop_unspec_vars(adtte_spec)
 
 adtte <- adtte %>%
@@ -98,9 +88,11 @@ adtte <- adtte %>%
   xportr_length(adtte_spec) %>%
   xportr_label(adtte_spec, domain = "ADTTE") %>% # Assigns variable label from metacore specifications
   xportr_df_label(adtte_spec, domain = "ADTTE")  %>%
-   xportr_format(adtte_spec$var_spec %>% mutate_at(c("format"), ~replace_na(.,'')), domain = "ADTTE")
+  xportr_format(adtte_spec$var_spec %>% mutate_at(c("format"), ~replace_na(.,'')) , domain = "ADTTE")
+
 
 # Save output ----
 
 xportr_write(adtte, "adam/adtte.xpt")
+
 
