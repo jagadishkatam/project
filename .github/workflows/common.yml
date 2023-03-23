@@ -12,7 +12,7 @@ on:
   # are pushed to one of these branches
   push:
     branches:
-      - main
+      - master
       - devel
       - pre-release
       - test
@@ -20,7 +20,7 @@ on:
   # created against one of these target branches.
   pull_request:
     branches:
-      - main
+      - master
       - devel
       - pre-release
       - test
