@@ -17,11 +17,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: ./setup-r
+      - uses: https://github.com/r-lib/actions/blob/c1e289d8a2b1f9860990fe3d944f12a42fcb7ed0/setup-r
         with:
           use-public-rspm: true
 
-      - uses: ./setup-r-dependencies
+      - uses: https://github.com/r-lib/actions/blob/c1e289d8a2b1f9860990fe3d944f12a42fcb7ed0/setup-r-dependencies
         with:
           extra-packages: any::rcmdcheck
           needs: check
