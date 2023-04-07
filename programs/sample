@@ -1,0 +1,581 @@
+--------------------------------------------------------------------------------
+-                                logrx Metadata                                -
+--------------------------------------------------------------------------------
+This log was generated using logrx 0.2.1
+logrx package version: 0.2.1
+logrx build: RSPM (R 4.2.0)
+logrx link to repository: https://github.com/pharmaverse/logrx
+--------------------------------------------------------------------------------
+-                          User and File Information                           -
+--------------------------------------------------------------------------------
+User: r716262
+File Name: adae.R
+File Path: /cloud/project/programs
+File HashSum: 18f10a53e8160db55ec4a4f4c989cd94252c7932
+--------------------------------------------------------------------------------
+-                             Session Information                              -
+--------------------------------------------------------------------------------
+─ Session info ────────────────────────────────────────────────────────────────
+ setting  value
+ version  R version 4.2.2 (2022-10-31)
+ os       Ubuntu 20.04.5 LTS
+ system   x86_64, linux-gnu
+ ui       RStudio
+ language (EN)
+ collate  C.UTF-8
+ ctype    C.UTF-8
+ tz       UTC
+ date     2023-03-11
+ rstudio  2022.12.0+353.pro20 Elsbeth Geranium (server)
+ pandoc   NA
+
+─ Packages ────────────────────────────────────────────────────────────────────
+ package       * version date (UTC) lib source
+ admiral       * 0.9.1   2022-12-23 [1] RSPM (R 4.2.0)
+ admiraldev      0.2.0   2022-12-01 [1] RSPM (R 4.2.0)
+ assertthat      0.2.1   2019-03-21 [1] RSPM (R 4.2.0)
+ backports       1.4.1   2021-12-13 [1] RSPM (R 4.2.0)
+ broom           1.0.2   2022-12-15 [1] RSPM (R 4.2.0)
+ callr           3.7.3   2022-11-02 [1] RSPM (R 4.2.0)
+ cellranger      1.1.0   2016-07-27 [1] RSPM (R 4.2.0)
+ cli             3.6.0   2023-01-09 [1] RSPM (R 4.2.0)
+ colorspace      2.0-3   2022-02-21 [1] RSPM (R 4.2.0)
+ crayon          1.5.2   2022-09-29 [1] RSPM (R 4.2.0)
+ cyclocomp       1.1.0   2016-09-10 [1] RSPM (R 4.2.0)
+ data.table    * 1.14.6  2022-11-16 [1] RSPM (R 4.2.0)
+ DBI             1.1.3   2022-06-18 [1] RSPM (R 4.2.0)
+ dbplyr          2.3.0   2023-01-16 [1] RSPM (R 4.2.0)
+ desc            1.4.2   2022-09-08 [1] RSPM (R 4.2.0)
+ digest          0.6.31  2022-12-11 [1] RSPM (R 4.2.0)
+ dplyr         * 1.1.0   2023-01-29 [1] RSPM (R 4.2.0)
+ ellipsis        0.3.2   2021-04-29 [1] RSPM (R 4.2.0)
+ fansi           1.0.4   2023-01-22 [1] RSPM (R 4.2.0)
+ fastmap         1.1.0   2021-01-25 [1] RSPM (R 4.2.0)
+ forcats       * 1.0.0   2023-01-29 [1] RSPM (R 4.2.0)
+ fs              1.5.2   2021-12-08 [1] RSPM (R 4.2.0)
+ gargle          1.2.1   2022-09-08 [1] RSPM (R 4.2.0)
+ generics        0.1.3   2022-07-05 [1] RSPM (R 4.2.0)
+ ggplot2       * 3.4.0   2022-11-04 [1] RSPM (R 4.2.0)
+ glue            1.6.2   2022-02-24 [1] RSPM (R 4.2.0)
+ googledrive     2.0.0   2021-07-08 [1] RSPM (R 4.2.0)
+ googlesheets4   1.0.1   2022-08-13 [1] RSPM (R 4.2.0)
+ gtable          0.3.1   2022-09-01 [1] RSPM (R 4.2.0)
+ haven         * 2.5.1   2022-08-22 [1] RSPM (R 4.2.0)
+ hms             1.1.2   2022-08-19 [1] RSPM (R 4.2.0)
+ htmltools       0.5.4   2022-12-07 [1] RSPM (R 4.2.0)
+ httpuv          1.6.8   2023-01-12 [1] RSPM (R 4.2.0)
+ httr            1.4.4   2022-08-17 [1] RSPM (R 4.2.0)
+ janitor       * 2.2.0   2023-02-02 [1] RSPM (R 4.2.0)
+ jsonlite        1.8.4   2022-12-06 [1] RSPM (R 4.2.0)
+ later           1.3.0   2021-08-18 [1] RSPM (R 4.2.0)
+ lazyeval        0.2.2   2019-03-15 [1] RSPM (R 4.2.0)
+ lifecycle       1.0.3   2022-10-07 [1] RSPM (R 4.2.0)
+ lintr           3.0.2   2022-10-19 [1] RSPM (R 4.2.0)
+ logrx         * 0.2.1   2023-02-03 [1] RSPM (R 4.2.0)
+ lubridate     * 1.9.2   2023-02-10 [1] RSPM (R 4.2.0)
+ magrittr        2.0.3   2022-03-30 [1] RSPM (R 4.2.0)
+ metacore      * 0.1.1   2022-12-07 [1] RSPM (R 4.2.0)
+ metatools     * 0.1.4   2023-02-18 [1] Github (pharmaverse/metatools@a60265b)
+ mime            0.12    2021-09-28 [1] RSPM (R 4.2.0)
+ miniUI          0.1.1.1 2018-05-18 [1] RSPM (R 4.2.0)
+ modelr          0.1.10  2022-11-11 [1] RSPM (R 4.2.0)
+ munsell         0.5.0   2018-06-12 [1] RSPM (R 4.2.0)
+ NLP             0.2-1   2020-10-14 [1] RSPM (R 4.2.0)
+ pillar          1.8.1   2022-08-19 [1] RSPM (R 4.2.0)
+ pkgconfig       2.0.3   2019-09-22 [1] RSPM (R 4.2.0)
+ processx        3.8.0   2022-10-26 [1] RSPM (R 4.2.0)
+ promises        1.2.0.1 2021-02-11 [1] RSPM (R 4.2.0)
+ ps              1.7.2   2022-10-26 [1] RSPM (R 4.2.0)
+ purrr         * 1.0.1   2023-01-10 [1] RSPM (R 4.2.0)
+ R6              2.5.1   2021-08-19 [1] RSPM (R 4.2.0)
+ Rcpp            1.0.10  2023-01-22 [1] RSPM (R 4.2.0)
+ readr         * 2.1.4   2023-02-10 [1] RSPM (R 4.2.0)
+ readxl          1.4.2   2023-02-09 [1] RSPM (R 4.2.0)
+ remotes         2.4.2   2021-11-30 [1] RSPM (R 4.2.0)
+ reprex          2.0.2   2022-08-17 [1] RSPM (R 4.2.0)
+ rex             1.2.1   2021-11-26 [1] RSPM (R 4.2.0)
+ rlang           1.0.6   2022-09-24 [1] RSPM (R 4.2.0)
+ rprojroot       2.0.3   2022-04-02 [1] RSPM (R 4.2.0)
+ rstudioapi      0.14    2022-08-22 [1] RSPM (R 4.2.0)
+ rvest           1.0.3   2022-08-19 [1] RSPM (R 4.2.0)
+ scales          1.2.1   2022-08-20 [1] RSPM (R 4.2.0)
+ sessioninfo     1.2.2   2021-12-06 [1] RSPM (R 4.2.0)
+ shiny           1.7.4   2022-12-15 [1] RSPM (R 4.2.0)
+ slam            0.1-50  2022-01-08 [1] RSPM (R 4.2.0)
+ snakecase       0.11.0  2019-05-25 [1] RSPM (R 4.2.0)
+ stringi         1.7.12  2023-01-11 [1] RSPM (R 4.2.0)
+ stringr       * 1.5.0   2022-12-02 [1] RSPM (R 4.2.0)
+ tibble        * 3.1.8   2022-07-22 [1] RSPM (R 4.2.0)
+ tidyr         * 1.3.0   2023-01-24 [1] RSPM (R 4.2.0)
+ tidyselect      1.2.0   2022-10-10 [1] RSPM (R 4.2.0)
+ tidyverse     * 1.3.2   2022-07-18 [1] RSPM (R 4.2.0)
+ timechange      0.2.0   2023-01-11 [1] RSPM (R 4.2.0)
+ tm              0.7-11  2023-02-05 [1] RSPM (R 4.2.0)
+ tzdb            0.3.0   2022-03-28 [1] RSPM (R 4.2.0)
+ utf8            1.2.3   2023-01-31 [1] RSPM (R 4.2.0)
+ vctrs           0.5.2   2023-01-23 [1] RSPM (R 4.2.0)
+ waiter          0.2.5   2022-01-03 [1] RSPM (R 4.2.0)
+ withr           2.5.0   2022-03-03 [1] RSPM (R 4.2.0)
+ xml2            1.3.3   2021-11-30 [1] RSPM (R 4.2.0)
+ xportr        * 0.2.0   2023-02-25 [1] Github (atorus-research/xportr@5bd830d)
+ xtable          1.8-4   2019-04-21 [1] RSPM (R 4.2.0)
+
+ [1] /cloud/lib/x86_64-pc-linux-gnu-library/4.2
+ [2] /opt/R/4.2.2/lib/R/library
+
+─ External software ───────────────────────────────────────────────────────────
+ setting        value
+ cairo          1.16.0
+ cairoFT
+ pango          1.44.7
+ png            1.6.37
+ jpeg           8.0
+ tiff           LIBTIFF, Version 4.1.0
+ tcl            8.6.10
+ curl           7.68.0
+ zlib           1.2.11
+ bzlib          1.0.8, 13-Jul-2019
+ xz             5.2.4
+ PCRE           10.34 2019-11-21
+ ICU            66.1
+ TRE            TRE 0.8.0 R_fixes (BSD)
+ iconv          glibc 2.31
+ readline       8.0
+ BLAS           /usr/lib/x86_64-linux-gnu/atlas/libblas.so.3.10.3
+ lapack         /usr/lib/x86_64-linux-gnu/atlas/liblapack.so.3.10.3
+ lapack_version 3.9.0
+
+─ Python configuration ────────────────────────────────────────────────────────
+ Python is not available
+
+───────────────────────────────────────────────────────────────────────────────
+--------------------------------------------------------------------------------
+-                               Masked Functions                               -
+--------------------------------------------------------------------------------
+function `metacore` from {package:metacore} by .GlobalEnv
+function `admiral_adsl` from {package:admiral} by .GlobalEnv
+function `dir` from {package:base} by .GlobalEnv
+function `as_factor` from {package:forcats} by package:haven
+function `%>%` from {package:metatools, package:metacore, package:forcats, package:stringr, package:dplyr, package:purrr, package:tidyr, package:tibble, package:admiral} by package:janitor
+function `chisq.test` from {package:stats} by package:janitor
+function `fisher.test` from {package:stats} by package:janitor
+function `hour` from {package:lubridate} by package:data.table
+function `isoweek` from {package:lubridate} by package:data.table
+function `mday` from {package:lubridate} by package:data.table
+function `minute` from {package:lubridate} by package:data.table
+function `month` from {package:lubridate} by package:data.table
+function `quarter` from {package:lubridate} by package:data.table
+function `second` from {package:lubridate} by package:data.table
+function `wday` from {package:lubridate} by package:data.table
+function `week` from {package:lubridate} by package:data.table
+function `yday` from {package:lubridate} by package:data.table
+function `year` from {package:lubridate} by package:data.table
+function `between` from {package:dplyr} by package:data.table
+function `first` from {package:dplyr} by package:data.table
+function `last` from {package:dplyr} by package:data.table
+function `transpose` from {package:purrr} by package:data.table
+function `intersect` from {package:dplyr, package:base} by package:lubridate
+function `setdiff` from {package:dplyr, package:base} by package:lubridate
+function `union` from {package:dplyr, package:base} by package:lubridate
+function `Arith` from {package:methods} by package:lubridate
+function `Compare` from {package:methods} by package:lubridate
+function `show` from {package:methods} by package:lubridate
+function `as.difftime` from {package:base} by package:lubridate
+function `date` from {package:base} by package:lubridate
+function `all_of` from {package:tidyr} by package:dplyr
+function `any_of` from {package:tidyr} by package:dplyr
+function `as_tibble` from {package:tidyr, package:tibble} by package:dplyr
+function `contains` from {package:tidyr} by package:dplyr
+function `ends_with` from {package:tidyr} by package:dplyr
+function `everything` from {package:tidyr} by package:dplyr
+function `last_col` from {package:tidyr} by package:dplyr
+function `matches` from {package:tidyr} by package:dplyr
+function `num_range` from {package:tidyr} by package:dplyr
+function `one_of` from {package:tidyr} by package:dplyr
+function `starts_with` from {package:tidyr} by package:dplyr
+function `tibble` from {package:tidyr, package:tibble} by package:dplyr
+function `tribble` from {package:tidyr, package:tibble} by package:dplyr
+function `add_row` from {package:tibble} by package:dplyr
+function `as_data_frame` from {package:tibble} by package:dplyr
+function `data_frame` from {package:tibble} by package:dplyr
+function `glimpse` from {package:tibble} by package:dplyr
+function `lst` from {package:tibble} by package:dplyr
+function `type_sum` from {package:tibble} by package:dplyr
+function `as_label` from {package:ggplot2} by package:dplyr
+function `enexpr` from {package:ggplot2} by package:dplyr
+function `enexprs` from {package:ggplot2} by package:dplyr
+function `enquo` from {package:ggplot2} by package:dplyr
+function `enquos` from {package:ggplot2} by package:dplyr
+function `ensym` from {package:ggplot2} by package:dplyr
+function `ensyms` from {package:ggplot2} by package:dplyr
+function `expr` from {package:ggplot2} by package:dplyr
+function `quo` from {package:ggplot2} by package:dplyr
+function `quo_name` from {package:ggplot2} by package:dplyr
+function `quos` from {package:ggplot2} by package:dplyr
+function `sym` from {package:ggplot2} by package:dplyr
+function `syms` from {package:ggplot2} by package:dplyr
+function `vars` from {package:ggplot2, package:admiral} by package:dplyr
+function `desc` from {package:admiral} by package:dplyr
+function `filter` from {package:stats} by package:dplyr
+function `lag` from {package:stats} by package:dplyr
+function `setequal` from {package:base} by package:dplyr
+function `Position` from {package:base} by package:ggplot2
+function `plot` from {package:base} by package:graphics
+function `body<-` from {package:base} by package:methods
+function `kronecker` from {package:base} by package:methods
+--------------------------------------------------------------------------------
+-                          Used Package and Functions                          -
+--------------------------------------------------------------------------------
+{.GlobalEnv} read_sdtm, format_racen
+{package:admiral} convert_blanks_to_na, derive_vars_merged, derive_vars_dt, derive_vars_dy, derive_vars_duration, derive_vars_dtm, restrict_derivation, params, negate_vars
+{package:base} library, c, paste0, assign, ifelse, is.na, as.integer, factor, paste
+{package:dplyr} vars, mutate, desc, select, filter, arrange, group_by, slice_head, ungroup, case_when, mutate_at
+{package:haven} read_xpt
+{package:janitor} %>%
+{package:metacore} spec_to_metacore, select_dataset
+{package:metatools} drop_unspec_vars, check_variables, order_cols, sort_by_key
+{package:purrr} walk
+{package:stringr} str_detect
+{package:tidyr} replace_na
+{package:xportr} xportr_label, xportr_df_label, xportr_format, xportr_write
+--------------------------------------------------------------------------------
+-                         Program Run Time Information                         -
+--------------------------------------------------------------------------------
+Start time: 2023-03-11 15:39:55 UTC
+End time: 2023-03-11 15:40:01 UTC
+Run time: 6 seconds
+--------------------------------------------------------------------------------
+-                             Errors and Warnings                              -
+--------------------------------------------------------------------------------
+Errors:
+	
+
+Warnings:
+	
+--------------------------------------------------------------------------------
+-                         Messages, Output, and Result                         -
+--------------------------------------------------------------------------------
+Messages:
+	 Metadata successfully imported
+	Loading in metacore object with suppressed warnings
+	The following variable(s) were dropped:  DOMAIN  AESPID  AEBDSYCD  AEDTC  AESTDTC  AEENDTC  AESTDY  AEENDY  ASEV  AREL  ASEVN  AOCCIFL  SUBJID  SITEGR1  ARM  TRT01P  TRT01PN  TRT01A  TRT01AN  TRTDURD  AVGDD  CUMDOSE  AGEU  ETHNIC  ITTFL  EFFFL  COMP8FL  COMP16FL  COMP24FL  DISCONFL  DSRAEFL  DTHFL  BMIBL  BMIBLGR1  HEIGHTBL  WEIGHTBL  EDUCLVL  DISONSDT  DURDIS  DURDSGR1  VISIT1DT  RFSTDTC  RFENDTC  VISNUMEN  RFENDT  DCDECOD  EOSSTT  DCSREAS  MMSETOT
+	No missing or extra variables
+Output:
+	
+	-
+	/
+	                                                                               
+	
+	/
+	                                                                               
+	
+	-
+	                                                                               
+	
+	-
+	/
+	                                                                               
+	
+	/
+	                                                                               
+	
+	-
+	                                                                               
+	
+	-
+	/
+	                                                                               
+	
+	/
+	                                                                               
+	
+	-
+	                                                                               
+	
+	-
+	/
+	                                                                               
+	
+	/
+	                                                                               
+	
+	-
+	                                                                               
+	
+	-
+	/
+	                                                                               
+	
+	/
+	                                                                               
+	
+	-
+	                                                                               
+	
+	-
+	/
+	                                                                               
+	
+	/
+	                                                                               
+	
+	-
+	                                                                               
+	
+	-
+	/
+	                                                                               
+	
+	/
+	                                                                               
+	
+	-
+	                                                                               
+	
+	-
+	/
+	                                                                               
+	
+	/
+	                                                                               
+	
+	-
+	                                                                               
+	
+	-
+	/
+	                                                                               
+	
+	/
+	                                                                               
+	
+	-
+	                                                                               
+	
+	-
+	/
+	                                                                               
+	
+	/
+	                                                                               
+	
+	-
+	                                                                               
+	
+	-
+	/
+	                                                                               
+	
+	/
+	                                                                               
+	
+	-
+	                                                                               
+	
+	-
+	/
+	                                                                               
+	
+	/
+	                                                                               
+	
+	-
+	                                                                               
+
+Result:
+	        STUDYID SITEID     USUBJID                 TRTA TRTAN AGE AGEGR1 AGEGR1N
+	1  CDISCPILOT01    701 01-701-1015              Placebo     0  63    <65       1
+	2  CDISCPILOT01    701 01-701-1015              Placebo     0  63    <65       1
+	3  CDISCPILOT01    701 01-701-1015              Placebo     0  63    <65       1
+	4  CDISCPILOT01    701 01-701-1023              Placebo     0  64    <65       1
+	5  CDISCPILOT01    701 01-701-1023              Placebo     0  64    <65       1
+	6  CDISCPILOT01    701 01-701-1023              Placebo     0  64    <65       1
+	7  CDISCPILOT01    701 01-701-1023              Placebo     0  64    <65       1
+	8  CDISCPILOT01    701 01-701-1028 Xanomeline High Dose    81  71  65-80       2
+	9  CDISCPILOT01    701 01-701-1028 Xanomeline High Dose    81  71  65-80       2
+	10 CDISCPILOT01    701 01-701-1034 Xanomeline High Dose    81  77  65-80       2
+	11 CDISCPILOT01    701 01-701-1034 Xanomeline High Dose    81  77  65-80       2
+	12 CDISCPILOT01    701 01-701-1047              Placebo     0  85    >80       3
+	13 CDISCPILOT01    701 01-701-1047              Placebo     0  85    >80       3
+	14 CDISCPILOT01    701 01-701-1047              Placebo     0  85    >80       3
+	15 CDISCPILOT01    701 01-701-1047              Placebo     0  85    >80       3
+	16 CDISCPILOT01    701 01-701-1097  Xanomeline Low Dose    54  68  65-80       2
+	17 CDISCPILOT01    701 01-701-1097  Xanomeline Low Dose    54  68  65-80       2
+	18 CDISCPILOT01    701 01-701-1097  Xanomeline Low Dose    54  68  65-80       2
+	    RACE RACEN SEX SAFFL     TRTSDT     TRTEDT      ASTDT ASTDTF ASTDY
+	1  WHITE     1   F     Y 2014-01-02 2014-07-02 2014-01-03   <NA>     2
+	2  WHITE     1   F     Y 2014-01-02 2014-07-02 2014-01-03   <NA>     2
+	3  WHITE     1   F     Y 2014-01-02 2014-07-02 2014-01-09   <NA>     8
+	4  WHITE     1   M     Y 2012-08-05 2012-09-01 2012-08-26   <NA>    22
+	5  WHITE     1   M     Y 2012-08-05 2012-09-01 2012-08-07   <NA>     3
+	6  WHITE     1   M     Y 2012-08-05 2012-09-01 2012-08-07   <NA>     3
+	7  WHITE     1   M     Y 2012-08-05 2012-09-01 2012-08-07   <NA>     3
+	8  WHITE     1   M     Y 2013-07-19 2014-01-14 2013-07-21   <NA>     3
+	9  WHITE     1   M     Y 2013-07-19 2014-01-14 2013-08-08   <NA>    21
+	10 WHITE     1   F     Y 2014-07-01 2014-12-30 2014-08-27   <NA>    58
+	11 WHITE     1   F     Y 2014-07-01 2014-12-30 2014-11-02   <NA>   125
+	12 WHITE     1   F     Y 2013-02-12 2013-03-09 2013-03-10   <NA>    27
+	13 WHITE     1   F     Y 2013-02-12 2013-03-09 2013-02-12   <NA>     1
+	14 WHITE     1   F     Y 2013-02-12 2013-03-09 2013-02-12   <NA>     1
+	15 WHITE     1   F     Y 2013-02-12 2013-03-09 2013-03-06   <NA>    23
+	16 WHITE     1   M     Y 2014-01-01 2014-07-09 2014-02-21   <NA>    52
+	17 WHITE     1   M     Y 2014-01-01 2014-07-09 2014-02-21   <NA>    52
+	18 WHITE     1   M     Y 2014-01-01 2014-07-09 2014-02-20   <NA>    51
+	        AENDT AENDY ADURN ADURU                               AETERM
+	1        <NA>    NA    NA  <NA>            APPLICATION SITE ERYTHEMA
+	2        <NA>    NA    NA  <NA>            APPLICATION SITE PRURITUS
+	3  2014-01-11    10     3   DAY                            DIARRHOEA
+	4        <NA>    NA    NA  <NA> ATRIOVENTRICULAR BLOCK SECOND DEGREE
+	5  2012-08-30    26    24   DAY                             ERYTHEMA
+	6        <NA>    NA    NA  <NA>                             ERYTHEMA
+	7  2012-08-30    26    24   DAY                             ERYTHEMA
+	8        <NA>    NA    NA  <NA>            APPLICATION SITE ERYTHEMA
+	9        <NA>    NA    NA  <NA>            APPLICATION SITE PRURITUS
+	10       <NA>    NA    NA  <NA>            APPLICATION SITE PRURITUS
+	11       <NA>    NA    NA  <NA>                              FATIGUE
+	12       <NA>    NA    NA  <NA>             BUNDLE BRANCH BLOCK LEFT
+	13 2013-02-12     1     1   DAY                        HIATUS HERNIA
+	14 2013-02-12     1     1   DAY                        HIATUS HERNIA
+	15       <NA>    NA    NA  <NA>    UPPER RESPIRATORY TRACT INFECTION
+	16       <NA>    NA    NA  <NA>            APPLICATION SITE PRURITUS
+	17       <NA>    NA    NA  <NA>            APPLICATION SITE PRURITUS
+	18 2014-02-22    53     3   DAY            APPLICATION SITE VESICLES
+	                         AELLT AELLTCD                              AEDECOD
+	1     APPLICATION SITE REDNESS      NA            APPLICATION SITE ERYTHEMA
+	2     APPLICATION SITE ITCHING      NA            APPLICATION SITE PRURITUS
+	3                     DIARRHEA      NA                            DIARRHOEA
+	4       AV BLOCK SECOND DEGREE      NA ATRIOVENTRICULAR BLOCK SECOND DEGREE
+	5                     ERYTHEMA      NA                             ERYTHEMA
+	6           LOCALIZED ERYTHEMA      NA                             ERYTHEMA
+	7                     ERYTHEMA      NA                             ERYTHEMA
+	8    APPLICATION SITE ERYTHEMA      NA            APPLICATION SITE ERYTHEMA
+	9     APPLICATION SITE ITCHING      NA            APPLICATION SITE PRURITUS
+	10    APPLICATION SITE ITCHING      NA            APPLICATION SITE PRURITUS
+	11                     FATIGUE      NA                              FATIGUE
+	12    LEFT BUNDLE BRANCH BLOCK      NA             BUNDLE BRANCH BLOCK LEFT
+	13               HERNIA HIATAL      NA                        HIATUS HERNIA
+	14               HERNIA HIATAL      NA                        HIATUS HERNIA
+	15 UPPER RESPIRATORY INFECTION      NA    UPPER RESPIRATORY TRACT INFECTION
+	16    APPLICATION SITE ITCHING      NA            APPLICATION SITE PRURITUS
+	17    APPLICATION SITE ITCHING      NA            APPLICATION SITE PRURITUS
+	18    APPLICATION SITE BLISTER      NA            APPLICATION SITE VESICLES
+	   AEPTCD    AEHLT AEHLTCD    AEHLGT AEHLGTCD
+	1      NA HLT_0617      NA HLGT_0152       NA
+	2      NA HLT_0317      NA HLGT_0338       NA
+	3      NA HLT_0148      NA HLGT_0588       NA
+	4      NA HLT_0415      NA HLGT_0086       NA
+	5      NA HLT_0284      NA HLGT_0192       NA
+	6      NA HLT_0284      NA HLGT_0192       NA
+	7      NA HLT_0284      NA HLGT_0192       NA
+	8      NA HLT_0617      NA HLGT_0152       NA
+	9      NA HLT_0317      NA HLGT_0338       NA
+	10     NA HLT_0317      NA HLGT_0338       NA
+	11     NA HLT_0043      NA HLGT_0181       NA
+	12     NA HLT_0281      NA HLGT_0721       NA
+	13     NA HLT_0159      NA HLGT_0109       NA
+	14     NA HLT_0159      NA HLGT_0109       NA
+	15     NA HLT_0520      NA HLGT_0489       NA
+	16     NA HLT_0317      NA HLGT_0338       NA
+	17     NA HLT_0317      NA HLGT_0338       NA
+	18     NA HLT_0180      NA HLGT_0576       NA
+	                                               AEBODSYS
+	1  GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS
+	2  GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS
+	3                            GASTROINTESTINAL DISORDERS
+	4                                     CARDIAC DISORDERS
+	5                SKIN AND SUBCUTANEOUS TISSUE DISORDERS
+	6                SKIN AND SUBCUTANEOUS TISSUE DISORDERS
+	7                SKIN AND SUBCUTANEOUS TISSUE DISORDERS
+	8  GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS
+	9  GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS
+	10 GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS
+	11 GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS
+	12                                    CARDIAC DISORDERS
+	13                           GASTROINTESTINAL DISORDERS
+	14                           GASTROINTESTINAL DISORDERS
+	15                          INFECTIONS AND INFESTATIONS
+	16 GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS
+	17 GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS
+	18 GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS
+	                                                  AESOC AESOCCD    AESEV AESER
+	1  GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS      NA     MILD     N
+	2  GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS      NA     MILD     N
+	3                            GASTROINTESTINAL DISORDERS      NA     MILD     N
+	4                                     CARDIAC DISORDERS      NA     MILD     N
+	5                SKIN AND SUBCUTANEOUS TISSUE DISORDERS      NA     MILD     N
+	6                SKIN AND SUBCUTANEOUS TISSUE DISORDERS      NA MODERATE     N
+	7                SKIN AND SUBCUTANEOUS TISSUE DISORDERS      NA     MILD     N
+	8  GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS      NA     MILD     N
+	9  GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS      NA     MILD     N
+	10 GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS      NA     MILD     N
+	11 GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS      NA     MILD     N
+	12                                    CARDIAC DISORDERS      NA     MILD     N
+	13                           GASTROINTESTINAL DISORDERS      NA MODERATE     N
+	14                           GASTROINTESTINAL DISORDERS      NA MODERATE     N
+	15                          INFECTIONS AND INFESTATIONS      NA     MILD     N
+	16 GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS      NA     MILD     N
+	17 GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS      NA MODERATE     N
+	18 GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS      NA     MILD     N
+	   AESCAN AESCONG AESDISAB AESDTH AESHOSP AESLIFE AESOD    AEREL AEACN
+	1       N       N        N      N       N       N     N PROBABLE  <NA>
+	2       N       N        N      N       N       N     N PROBABLE  <NA>
+	3       N       N        N      N       N       N     N   REMOTE  <NA>
+	4       N       N        N      N       N       N     N POSSIBLE  <NA>
+	5       N       N        N      N       N       N     N POSSIBLE  <NA>
+	6       N       N        N      N       N       N     N PROBABLE  <NA>
+	7       N       N        N      N       N       N     N POSSIBLE  <NA>
+	8       N       N        N      N       N       N     N POSSIBLE  <NA>
+	9       N       N        N      N       N       N     N PROBABLE  <NA>
+	10      N       N        N      N       N       N     N PROBABLE  <NA>
+	11      N       N        N      N       N       N     N POSSIBLE  <NA>
+	12      N       N        N      N       N       N     N     NONE  <NA>
+	13      N       N        N      N       N       N     N     NONE  <NA>
+	14      N       N        N      N       N       N     N     NONE  <NA>
+	15      N       N        N      N       N       N     N     NONE  <NA>
+	16      N       N        N      N       N       N     N POSSIBLE  <NA>
+	17      N       N        N      N       N       N     N POSSIBLE  <NA>
+	18      N       N        N      N       N       N     N PROBABLE  <NA>
+	                        AEOUT AESEQ TRTEMFL AOCCFL AOCCSFL AOCCPFL AOCC02FL
+	1  NOT RECOVERED/NOT RESOLVED     1       Y      Y       Y       Y     <NA>
+	2  NOT RECOVERED/NOT RESOLVED     2       Y   <NA>    <NA>       Y     <NA>
+	3          RECOVERED/RESOLVED     3       Y   <NA>       Y       Y     <NA>
+	4  NOT RECOVERED/NOT RESOLVED     3       Y   <NA>       Y       Y     <NA>
+	5  NOT RECOVERED/NOT RESOLVED     1       Y      Y       Y       Y     <NA>
+	6  NOT RECOVERED/NOT RESOLVED     2       Y   <NA>    <NA>    <NA>     <NA>
+	7          RECOVERED/RESOLVED     4       Y   <NA>    <NA>    <NA>     <NA>
+	8  NOT RECOVERED/NOT RESOLVED     1       Y      Y       Y       Y     <NA>
+	9  NOT RECOVERED/NOT RESOLVED     2       Y   <NA>    <NA>       Y     <NA>
+	10 NOT RECOVERED/NOT RESOLVED     1       Y      Y       Y       Y     <NA>
+	11 NOT RECOVERED/NOT RESOLVED     2       Y   <NA>    <NA>       Y     <NA>
+	12 NOT RECOVERED/NOT RESOLVED     4       Y   <NA>       Y       Y     <NA>
+	13 NOT RECOVERED/NOT RESOLVED     1       Y      Y       Y       Y     <NA>
+	14         RECOVERED/RESOLVED     2       Y   <NA>    <NA>    <NA>     <NA>
+	15 NOT RECOVERED/NOT RESOLVED     3       Y   <NA>       Y       Y     <NA>
+	16 NOT RECOVERED/NOT RESOLVED     4       Y   <NA>    <NA>       Y     <NA>
+	17 NOT RECOVERED/NOT RESOLVED    10       Y   <NA>    <NA>    <NA>     <NA>
+	18         RECOVERED/RESOLVED     3       Y   <NA>       Y       Y     <NA>
+	   AOCC03FL AOCC04FL             CQ01NAM AOCC01FL
+	1      <NA>     <NA> DERMATOLOGIC EVENTS        Y
+	2      <NA>     <NA> DERMATOLOGIC EVENTS     <NA>
+	3      <NA>     <NA>                <NA>     <NA>
+	4      <NA>     <NA>                <NA>     <NA>
+	5      <NA>     <NA> DERMATOLOGIC EVENTS        Y
+	6      <NA>     <NA> DERMATOLOGIC EVENTS     <NA>
+	7      <NA>     <NA> DERMATOLOGIC EVENTS     <NA>
+	8      <NA>     <NA> DERMATOLOGIC EVENTS        Y
+	9      <NA>     <NA> DERMATOLOGIC EVENTS     <NA>
+	10     <NA>     <NA> DERMATOLOGIC EVENTS        Y
+	11     <NA>     <NA>                <NA>     <NA>
+	12     <NA>     <NA>                <NA>     <NA>
+	13     <NA>     <NA>                <NA>     <NA>
+	14     <NA>     <NA>                <NA>     <NA>
+	15     <NA>     <NA>                <NA>     <NA>
+	16     <NA>     <NA> DERMATOLOGIC EVENTS     <NA>
+	17     <NA>     <NA> DERMATOLOGIC EVENTS     <NA>
+	18     <NA>     <NA> DERMATOLOGIC EVENTS     <NA>
+	 [ reached 'max' / getOption("max.print") -- omitted 1173 rows ]
+--------------------------------------------------------------------------------
+-                               Log Output File                                -
+--------------------------------------------------------------------------------
+Log name: sample
+Log path: /cloud/project/programs

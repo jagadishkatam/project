@@ -58,7 +58,7 @@ format_agegr1 <- function(x) {
   )
 }
 
-format_bmiblgr1 <- function(x) {
+format_bmiblgr1 <- function(x)  {
   case_when(
     x < 25 ~ "<25",
     25 <= x & x < 30 ~ "25-<30",
